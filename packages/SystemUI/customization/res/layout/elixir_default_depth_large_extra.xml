@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.android.systemui.shared.clocks.ClockLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginBottom="@dimen/_minus37sdp"
+    android:layout_gravity="center_horizontal|center_vertical">
+<FrameLayout
+    android:id="@+id/depthParentLayout"
+	android:layout_width="match_parent"
+    android:layout_gravity="center_horizontal|center_vertical"
+	android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/depthMainLayout"
+		android:gravity="start|center_vertical"
+		android:layout_gravity="start|center_vertical"
+        android:layout_marginStart="@dimen/_18sdp"
+        android:orientation="vertical"
+		android:layout_width="wrap_content"	
+		android:layout_height="wrap_content">
+
+        <LinearLayout 
+            android:gravity="start|center" 
+            android:layout_gravity="start|center"
+            android:orientation="horizontal" 
+            android:layout_width="wrap_content" 
+            android:layout_height="wrap_content">
+
+            <TextClock
+		    	android:textSize="75sp"
+		    	android:gravity="center"
+                android:textStyle="bold"
+                android:fontFamily="@*android:string/config_clockFontFamily"
+		    	android:textColor="#FFFFB5"	  
+		    	android:layout_width="wrap_content"	 
+		    	android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="40sp"
+                android:autoSizeMaxTextSize="75sp"
+                android:autoSizeStepGranularity="1sp"
+                android:format12Hour="hh"
+                android:format24Hour="kk"/>
+
+            <TextClock
+		    	android:textSize="75sp"
+		    	android:gravity="center"
+                android:fontFamily="@*android:string/config_clockFontFamily"
+                android:layout_marginStart="@dimen/_2sdp"
+                android:textStyle="bold"
+		    	android:textColor="#808080"
+                android:maxLines="1"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="40sp"
+                android:autoSizeMaxTextSize="75sp"
+                android:autoSizeStepGranularity="1sp"
+		    	android:layout_width="wrap_content"	 
+		    	android:layout_height="wrap_content"
+                android:format12Hour="mm"
+                android:format24Hour="mm"/>
+
+        </LinearLayout>
+      
+        <TextClock 
+            android:textSize="75sp"
+            android:fontFamily="@*android:string/config_clockFontFamily"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="40sp"
+            android:autoSizeMaxTextSize="75sp"
+            android:autoSizeStepGranularity="1sp"
+            android:layout_width="wrap_content" 
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white" 
+            android:format12Hour="EEEE"
+            android:format24Hour="EEEE" />
+
+        <TextClock 
+            android:textSize="75sp"
+            android:fontFamily="@*android:string/config_clockFontFamily"
+            android:textStyle="bold"
+            android:layout_width="wrap_content" 
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="40sp"
+            android:autoSizeMaxTextSize="75sp"
+            android:autoSizeStepGranularity="1sp"
+            android:textColor="@android:color/white" 
+            android:format12Hour="dd/MM"
+            android:format24Hour="dd/MMMM" />
+
+    </LinearLayout>
+       
+    <com.android.systemui.shared.clocks.ElixirImageView
+        android:id="@+id/depthClockImageView"
+        android:layout_width="@dimen/_350sdp"
+	    android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
+        android:scaleType="centerCrop"
+        android:alpha="1.0" />
+</FrameLayout>
+</com.android.systemui.shared.clocks.ClockLayout>

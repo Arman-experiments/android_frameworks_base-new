@@ -18,6 +18,11 @@ package com.android.internal.util.android;
 
 import static android.os.UserHandle.USER_SYSTEM;
 
+import static android.provider.Settings.Secure.LOCK_SCREEN_CUSTOM_CLOCK;
+import static android.provider.Settings.Secure.LOCKSCREEN_DEPTH_CLOCK;
+import static android.provider.Settings.Secure.LOCKSCREEN_DEPTH_CLOCK_AUTO;
+import static android.provider.Settings.Secure.LOCKSCREEN_DEPTH_CLOCK_AUTO_REFRESH;
+
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.om.IOverlayManager;
@@ -102,6 +107,23 @@ public class ThemeUtils {
         } catch (RemoteException e) {
             Log.e(TAG, "Error enabling overlay", e);
         }
+    }
+
+    public static Boolean getAutomatedDepthClock(ContentResolver resolver) {
+        return Settings.Secure.getInt(resolver, LOCKSCREEN_DEPTH_CLOCK_AUTO, 0) != 0;
+    }
+
+    public static void refreshCustomClock(ContentResolver resolver) {
+        int currentValue = Settings.Secure.getInt(resolver, LOCKSCREEN_DEPTH_CLOCK_AUTO_REFRESH, 0);
+        if (currentValue == 0) {
+            Settings.Secure.putInt(resolver, LOCKSCREEN_DEPTH_CLOCK_AUTO_REFRESH, 1);
+        } else {
+            Settings.Secure.putInt(resolver, LOCKSCREEN_DEPTH_CLOCK_AUTO_REFRESH, 0);
+        }
+    }
+
+    public static void setAutomatedDepthClock(ContentResolver resolver, int value) {
+        Settings.Secure.putInt(resolver, LOCKSCREEN_DEPTH_CLOCK_AUTO, value);
     }
 
     public void writeSettings(String category, String packageName, boolean disable) {

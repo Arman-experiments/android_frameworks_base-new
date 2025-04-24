@@ -9583,6 +9583,21 @@ public final class Settings {
                 "lock_screen_allow_remote_input";
 
         /**
+         * Whether to use custom clock
+         * Values should be Int, 0 = disabled, 1=custom clock
+         * @hide
+         */
+        @Readable
+        public static final String LOCK_SCREEN_CUSTOM_CLOCK = "lock_screen_custom_clock";
+
+        /**
+         * Whether to use custom clock
+         * @hide
+         */
+        @Readable
+        public static final String LOCK_SCREEN_CUSTOM_CLOCK_STYLES = "lock_screen_custom_clock_styles";
+
+        /**
          * Indicates which clock face to show on lock screen and AOD formatted as a serialized
          * {@link org.json.JSONObject} with the format:
          *     {"clock": id, "_applied_timestamp": timestamp}
@@ -12798,6 +12813,62 @@ public final class Settings {
          */
         public static final String LOCKSCREEN_USE_DOUBLE_LINE_CLOCK =
                 "lockscreen_use_double_line_clock";
+
+        /**
+         * Whether depth clock style is enabled on lockscreen
+         *
+         * @hide
+         */
+        public static final String LOCKSCREEN_DEPTH_CLOCK = "lockscreen_depth_clock";
+
+        /**
+         * Lockscreen depth clock style
+         *
+         * @hide
+         */
+        public static final String LOCKSCREEN_DEPTH_CLOCK_STYLES = "lockscreen_depth_clock_styles";
+
+        /**
+         * Lockscreen automatic depth clock
+         *
+         * @hide
+         */
+        public static final String LOCKSCREEN_DEPTH_CLOCK_AUTO = "lockscreen_depth_clock_auto";
+
+        /**
+         * Lockscreen automatic depth clock margin
+         *
+         * @hide
+         */
+        public static final String LSCLOCK_DEPTH_CLOCK_AUTO_MARGIN = "lsclock_depth_clock_auto_margin";
+
+        /**
+         * Lockscreen automatic depth clock image view margin
+         *
+         * @hide
+         */
+        public static final String LSCLOCK_DEPTH_CLOCK_AUTO_IMAGE_MARGIN = "lsclock_depth_clock_auto_image_margin";
+
+        /**
+         * Current applied custom clock overlay
+         *
+         * @hide
+         */
+        public static final String LOCKSCREEN_CURRENT_CLOCK_OVERLAY = "lockscreen_current_clock_overlay";
+
+        /**
+         * Lockscreen automatic depth clock
+         *
+         * @hide
+         */
+        public static final String LOCKSCREEN_DEPTH_CLOCK_AUTO_STYLE = "lockscreen_depth_clock_auto_style";
+
+        /**
+         * Lockscreen automatic depth clock refresh
+         *
+         * @hide
+         */
+        public static final String LOCKSCREEN_DEPTH_CLOCK_AUTO_REFRESH = "lockscreen_depth_clock_auto_refresh";
 
         /**
          * Whether to show the vibrate icon in the Status Bar (default off)
