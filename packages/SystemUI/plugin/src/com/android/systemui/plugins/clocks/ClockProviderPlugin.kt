@@ -174,29 +174,6 @@ class DefaultClockFaceLayout(val view: View) : ClockFaceLayout {
     }
 }
 
-/** A ClockFaceLayout that applies the default lockscreen layout to a single view */
-class CustomClockFaceLayout(val view: View) : ClockFaceLayout {
-    // both small and large clock should have a container (RelativeLayout in
-    // SimpleClockFaceController)
-    override val views = listOf(view)
-    override fun applyConstraints(constraints: ConstraintSet): ConstraintSet {
-        if (views.size != 1) {
-            throw IllegalArgumentException(
-                "Should have only one container view when using CustomClockFaceLayout"
-            )
-        }
-        return constraints
-    }
-
-    override fun applyPreviewConstraints(constraints: ConstraintSet): ConstraintSet {
-        return constraints
-    }
-
-    override fun applyAodBurnIn(aodBurnInModel: AodClockBurnInModel) {
-        // Custom clock doesn't need detailed control of view
-    }
-}
-
 /** Events that should call when various rendering parameters change */
 @ProtectedInterface
 interface ClockEvents {
