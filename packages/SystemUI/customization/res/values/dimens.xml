@@ -16,6 +16,12 @@
 */
 -->
 <resources>
+    <dimen name="_minus37sdp">-37dp</dimen>
+    <dimen name="_2sdp">2dp</dimen>
+    <dimen name="_5sdp">5dp</dimen>
+    <dimen name="_18sdp">18dp</dimen>
+    <dimen name="_350sdp">350dp</dimen>
+
     <!-- Clock maximum font size (dp is intentional, to prevent any further scaling) -->
     <dimen name="presentation_clock_text_size">@*android:dimen/presentation_clock_text_size</dimen>
     <dimen name="large_clock_text_size">@*android:dimen/large_clock_text_size</dimen>
