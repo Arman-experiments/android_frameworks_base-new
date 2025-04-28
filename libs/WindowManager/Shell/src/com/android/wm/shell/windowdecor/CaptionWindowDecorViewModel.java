@@ -54,8 +54,6 @@ import android.window.WindowContainerTransaction;
 
 import androidx.annotation.Nullable;
 
-import com.android.internal.jank.InteractionJankMonitor;
-
 import com.android.wm.shell.R;
 import com.android.wm.shell.RootTaskDisplayAreaOrganizer;
 import com.android.wm.shell.ShellTaskOrganizer;
@@ -95,7 +93,6 @@ public class CaptionWindowDecorViewModel implements WindowDecorViewModel, FocusT
     private final Region mExclusionRegion = Region.obtain();
     private final InputManager mInputManager;
     private final WindowDecorViewHostSupplier<WindowDecorViewHost> mWindowDecorViewHostSupplier;
-    private final InteractionJankMonitor mInteractionJankMonitor;
     private TaskOperations mTaskOperations;
     private FocusTransitionObserver mFocusTransitionObserver;
 
@@ -137,8 +134,7 @@ public class CaptionWindowDecorViewModel implements WindowDecorViewModel, FocusT
             SyncTransactionQueue syncQueue,
             Transitions transitions,
             FocusTransitionObserver focusTransitionObserver,
-            WindowDecorViewHostSupplier<WindowDecorViewHost> windowDecorViewHostSupplier,
-            InteractionJankMonitor interactionJankMonitor) {
+            WindowDecorViewHostSupplier<WindowDecorViewHost> windowDecorViewHostSupplier) {
         mContext = context;
         mMainExecutor = shellExecutor;
         mMainHandler = mainHandler;
@@ -152,7 +148,6 @@ public class CaptionWindowDecorViewModel implements WindowDecorViewModel, FocusT
         mTransitions = transitions;
         mFocusTransitionObserver = focusTransitionObserver;
         mWindowDecorViewHostSupplier = windowDecorViewHostSupplier;
-        mInteractionJankMonitor = interactionJankMonitor;
         if (!Transitions.ENABLE_SHELL_TRANSITIONS) {
             mTaskOperations = new TaskOperations(null, mContext, mSyncQueue);
         }
@@ -346,29 +341,17 @@ public class CaptionWindowDecorViewModel implements WindowDecorViewModel, FocusT
                         mWindowDecorViewHostSupplier);
         mWindowDecorByTaskId.put(taskInfo.taskId, windowDecoration);
 
-        final DragPositioningCallback taskPositioner = createDragPositioningCallback(
-                windowDecoration);
+        final FluidResizeTaskPositioner taskPositioner =
+                new FluidResizeTaskPositioner(mTaskOrganizer, mTransitions, windowDecoration,
+                        mDisplayController);
         final CaptionTouchEventListener touchEventListener =
                 new CaptionTouchEventListener(taskInfo, taskPositioner);
         windowDecoration.setCaptionListeners(touchEventListener, touchEventListener);
         windowDecoration.setDragPositioningCallback(taskPositioner);
-        windowDecoration.setTaskDragResizer((VeiledResizeTaskPositioner) taskPositioner);
+        windowDecoration.setTaskDragResizer(taskPositioner);
         windowDecoration.relayout(taskInfo, startT, finishT,
                 false /* applyStartTransactionOnDraw */, false /* setTaskCropAndPosition */,
                 mFocusTransitionObserver.hasGlobalFocus(taskInfo), mExclusionRegion);
-    }
-
-    private DragPositioningCallback createDragPositioningCallback(
-            CaptionWindowDecoration windowDecoration) {
-            windowDecoration.createResizeVeil();
-        return new VeiledResizeTaskPositioner(
-                mTaskOrganizer,
-                windowDecoration,
-                mDisplayController,
-                dragStartListener -> {},
-                mTransitions,
-                mInteractionJankMonitor,
-                mMainHandler);
     }
 
     private class CaptionTouchEventListener implements
