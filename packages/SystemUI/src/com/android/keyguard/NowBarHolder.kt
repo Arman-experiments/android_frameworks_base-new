@@ -41,14 +41,8 @@ class NowBarHolder @JvmOverloads constructor(
     
     private var isChargingStatusHandled = false
     private var wasPlayingBefore = false
-    private val mediaCheckHandler = Handler(Looper.getMainLooper())
-    private val mediaCheckRunnable = Runnable {
-        if (!mMediaSessionManagerHelper.isMediaPlaying()) {
-            if (isChargingStatusHandled) {
-                mViewPager?.setCurrentItem(1)
-            }
-        }
-    }
+    private var mediaCheckHandler = Handler(Looper.getMainLooper())
+    private var mediaCheckRunnable: Runnable? = null
 
     private val batteryReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -118,11 +112,23 @@ class NowBarHolder @JvmOverloads constructor(
     
     private fun startMediaCheckTask() {
         stopMediaCheckTask()
+        
+        mediaCheckRunnable = Runnable {
+            if (!mMediaSessionManagerHelper.isMediaPlaying()) {
+                if (isChargingStatusHandled) {
+                    mViewPager?.setCurrentItem(1)
+                }
+            }
+        }
+        
         mediaCheckHandler.postDelayed(mediaCheckRunnable, 2000)
     }
     
     private fun stopMediaCheckTask() {
-        mediaCheckHandler.removeCallbacks(mediaCheckRunnable)
+        mediaCheckRunnable?.let {
+            mediaCheckHandler.removeCallbacks(it)
+            mediaCheckRunnable = null
+        }
     }
 
     private inner class NowBarAdapter(private val context: Context) : PagerAdapter() {
