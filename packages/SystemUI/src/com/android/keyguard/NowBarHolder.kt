@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2023-2024 The risingOS Android Project
- * Copyright (C) 2025 The RisingOS Revived Android Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +20,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.os.Handler
-import android.os.Looper
 import android.util.AttributeSet
 import android.view.View
 import android.widget.RelativeLayout
@@ -40,9 +37,6 @@ class NowBarHolder @JvmOverloads constructor(
     private var mMediaSessionManagerHelper: MediaSessionManagerHelper
     
     private var isChargingStatusHandled = false
-    private var wasPlayingBefore = false
-    private var mediaCheckHandler = Handler(Looper.getMainLooper())
-    private var mediaCheckRunnable: Runnable? = null
 
     private val batteryReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -85,50 +79,14 @@ class NowBarHolder @JvmOverloads constructor(
         mController.removeNowBarHolder(this)
         context.unregisterReceiver(batteryReceiver)
         mMediaSessionManagerHelper.removeMediaMetadataListener(this)
-        stopMediaCheckTask()
     }
 
     override fun onMediaMetadataChanged() {
-        handleMediaStateChange()
+        showMusicNowBarIfNeeded()
     }
 
     override fun onPlaybackStateChanged() {
-        handleMediaStateChange()
-    }
-
-    private fun handleMediaStateChange() {
-        val isPlaying = mMediaSessionManagerHelper.isMediaPlaying()
-        
-        if (isPlaying) {
-            wasPlayingBefore = true
-            mViewPager?.setCurrentItem(0)
-            
-            stopMediaCheckTask()
-        } else if (wasPlayingBefore) {
-            wasPlayingBefore = false
-            startMediaCheckTask()
-        }
-    }
-    
-    private fun startMediaCheckTask() {
-        stopMediaCheckTask()
-        
-        mediaCheckRunnable = Runnable {
-            if (!mMediaSessionManagerHelper.isMediaPlaying()) {
-                if (isChargingStatusHandled) {
-                    mViewPager?.setCurrentItem(1)
-                }
-            }
-        }
-        
-        mediaCheckHandler.postDelayed(mediaCheckRunnable, 2000)
-    }
-    
-    private fun stopMediaCheckTask() {
-        mediaCheckRunnable?.let {
-            mediaCheckHandler.removeCallbacks(it)
-            mediaCheckRunnable = null
-        }
+        showMusicNowBarIfNeeded()
     }
 
     private inner class NowBarAdapter(private val context: Context) : PagerAdapter() {
@@ -196,5 +154,10 @@ class NowBarHolder @JvmOverloads constructor(
         return chargePlug == BatteryManager.BATTERY_PLUGGED_AC
                 || chargePlug == BatteryManager.BATTERY_PLUGGED_USB
                 || chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS
+    }
+
+    private fun showMusicNowBarIfNeeded() {
+        if (!mMediaSessionManagerHelper.isMediaPlaying()) return
+        mViewPager?.setCurrentItem(0)
     }
 }
