@@ -183,19 +183,6 @@
     <string name="config_batterymeterLandPowersavePathOrigami" translatable="false">@string/config_batterymeterLandPerimeterPathOrigami</string>
     <string name="config_batterymeterLandErrorPerimeterPathOrigami" translatable="false">@string/config_batterymeterLandPerimeterPathOrigami</string>
 
-    <!-- OneUI 7 -->
-    <string name="config_batterymeterLandPerimeterPathOneUI7" translatable="false">
-        M6,0 C2.69,0 0,2.69 0,6 C0,9.31 2.69,12 6,12 L18,12 C21.31,12 24,9.31 24,6 C24,2.69 21.31,0 18,0 L6,0 Z 
-    </string>
-    <string name="config_batterymeterLandFillMaskOneUI7" translatable="false">
-        M6,0 C2.69,0 0,2.69 0,6 C0,9.31 2.69,12 6,12 L18,12 C21.31,12 24,9.31 24,6 C24,2.69 21.31,0 18,0 L6,0 Z
-    </string>
-    <string name="config_batterymeterLandBoltPathOneUI7" translatable="false">
-        M19.96,5.25L21.91,5.25Q22.43,5.31,22.10,5.77L18.69,9.77C18.39,10.06,17.81,9.87,18.10,9.18L19.04,6.75L17.09,6.75Q16.57,6.69,16.90,6.23L20.31,2.23C20.61,1.94,21.19,2.13,20.90,2.82L19.96,5.25z
-    </string>
-    <string name="config_batterymeterLandPowersavePathOneUI7" translatable="false">@string/config_batterymeterLandPerimeterPathOneUI7</string>
-    <string name="config_batterymeterLandErrorPerimeterPathOneUI7" translatable="false">@string/config_batterymeterLandPerimeterPathOneUI7</string>
-
     <!-- List of system apps that are allowed to be locked with app lock.
          Use with extreme caution. -->
     <string-array name="config_appLockAllowedSystemApps" translatable="false">
