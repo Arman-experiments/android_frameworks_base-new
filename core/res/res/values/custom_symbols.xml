@@ -117,6 +117,8 @@
     <java-symbol type="string" name="config_batterymeterLandPowersavePathOrigami" />
     <java-symbol type="string" name="config_batterymeterLandErrorPerimeterPathOrigami" />
 
+    <java-symbol type="string" name="config_batterymeterLandBattPathiOS16" />
+
     <!-- Lock gesture -->
     <java-symbol type="string" name="gesture_locked_warning" />
 

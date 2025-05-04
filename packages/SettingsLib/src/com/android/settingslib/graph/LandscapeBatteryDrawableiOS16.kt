@@ -17,10 +17,9 @@ package com.android.settingslib.graph
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.Drawable
-
 import android.util.PathParser
 import android.util.TypedValue
-
+import android.view.animation.AccelerateDecelerateInterpolator
 import com.android.settingslib.R
 import com.android.settingslib.Utils
 
@@ -60,6 +59,10 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
     // Plus sign (used for power save mode)
     private val plusPath = Path()
     private val scaledPlus = Path()
+    
+    // New path for battery saver icon
+    private val battPath = Path()
+    private val scaledBatt = Path()
 
     private var intrinsicHeight: Int
     private var intrinsicWidth: Int
@@ -81,22 +84,62 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
 
     private var batteryLevel = 0
 
+    // Animation variables
+    private var animationStartTime: Long = 0
+    private var animationActive: Boolean = false
+    private val ANIMATION_DURATION_MS: Long = 10000 // 10 seconds duration for the animation
+    
+    // Animation for icon and percentage slide in
+    private var slideAnimationStartTime: Long = 0
+    private var slideAnimationActive: Boolean = false
+    private val SLIDE_ANIMATION_DURATION_MS: Long = 500 // 500ms for slide animation
+    private val interpolator = AccelerateDecelerateInterpolator()
+    
+    // Position variables for animated elements
+    private var iconXOffset: Float = 0f
+    private var textXOffset: Float = 0f
+    private var previousState: Int = STATE_NORMAL // Track state changes to trigger animation
+
     private val invalidateRunnable: () -> Unit = {
         invalidateSelf()
     }
 
     var charging = false
         set(value) {
-            field = value
-            levelColor = batteryColorForLevel(batteryLevel)
-            postInvalidate()
+            if (field != value) {
+                val stateChange = if (value) STATE_CHARGING else STATE_NORMAL
+                if (stateChange != previousState) {
+                    startSlideAnimation()
+                    previousState = stateChange
+                }
+                
+                field = value
+                if (value) {
+                    // Start animation when charging begins
+                    animationStartTime = android.os.SystemClock.uptimeMillis()
+                    animationActive = true
+                } else {
+                    // Stop animation when charging ends
+                    animationActive = false
+                }
+                levelColor = batteryColorForLevel(batteryLevel)
+                postInvalidate()
+            }
         }
 
     var powerSaveEnabled = false
         set(value) {
-            field = value
-            levelColor = batteryColorForLevel(batteryLevel)
-            postInvalidate()
+            if (field != value) {
+                val stateChange = if (value) STATE_POWER_SAVE else STATE_NORMAL
+                if (stateChange != previousState) {
+                    startSlideAnimation()
+                    previousState = stateChange
+                }
+                
+                field = value
+                levelColor = batteryColorForLevel(batteryLevel)
+                postInvalidate()
+            }
         }
 
     var showPercent = true
@@ -157,7 +200,7 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).also { p ->
-        p.typeface = Typeface.create("sanfrancisco", Typeface.BOLD)
+        p.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
         p.textAlign = Paint.Align.CENTER
     }
 
@@ -184,6 +227,21 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
         colors.recycle()
 
         loadPaths()
+    }
+
+    // Time value for animation
+    private var animationTime = 0f
+    private val animationPaint = Paint(Paint.ANTI_ALIAS_FLAG).also { p ->
+        p.color = 0xFF34C759.toInt()  // Charging green color
+        p.alpha = 255
+        p.isDither = true
+        p.style = Paint.Style.FILL_AND_STROKE
+    }
+    
+    private fun startSlideAnimation() {
+        slideAnimationStartTime = android.os.SystemClock.uptimeMillis()
+        slideAnimationActive = true
+        postInvalidate()
     }
 
     override fun draw(c: Canvas) {
@@ -217,14 +275,50 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
 
         textPaint.textSize = bounds.width() * 0.42f
         val textHeight = +textPaint.fontMetrics.ascent
-        var pctX = (bounds.width() + textHeight) * 0.75f
-        val pctY = bounds.height() * 0.8f
-
-        if (charging && batteryLevel < 100) {
-            pctX = (bounds.width() + textHeight) * 0.7f
-            pctX -= (pctX * 0.2f)
+        
+        // Calculate animation progress for slide in effect
+        var slideProgress = 1.0f // Default to fully shown (no animation)
+        if (slideAnimationActive) {
+            val currentTime = android.os.SystemClock.uptimeMillis()
+            val elapsedTime = currentTime - slideAnimationStartTime
+            
+            if (elapsedTime < SLIDE_ANIMATION_DURATION_MS) {
+                slideProgress = interpolator.getInterpolation(elapsedTime / SLIDE_ANIMATION_DURATION_MS.toFloat())
+                // Schedule next frame
+                invalidateSelf()
+            } else {
+                slideAnimationActive = false
+                slideProgress = 1.0f
+            }
         }
-
+        
+        // Calculate base positions - where elements should end up
+        val baseTextX: Float
+        val baseTextY: Float
+        val baseIconOffsetX: Float
+        
+        // Calculate positions with animation
+        if ((charging || powerSaveEnabled) && batteryLevel < 100) {
+            // Off-center position with bolt for both charging and power save mode
+            baseTextX = (bounds.width() + textHeight) * 0.7f * 0.8f
+            baseTextY = bounds.height() * 0.8f
+            baseIconOffsetX = 0f // Icon is at its final position
+            
+            // Apply animation - text slides in from the edge
+            val startX = bounds.width() * 1.5f // Start position off-screen
+            textXOffset = startX - (startX - baseTextX) * slideProgress
+        } else {
+            // Center the text when in normal state
+            baseTextX = bounds.width() * 0.5f  // Center horizontally
+            baseTextY = bounds.height() * 0.5f - ((textPaint.descent() + textPaint.ascent()) / 2)  // Center vertically
+            baseIconOffsetX = 0f
+            textXOffset = baseTextX
+        }
+        
+        // Apply the animated positions
+        val pctX = textXOffset
+        val pctY = baseTextY
+        
         val textPath = Path()
         textPath.reset()
         textPaint.getTextPath(
@@ -232,24 +326,73 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
         )
 
         mergedPath.addPath(textPath)
-        mergedPath.addPath(scaledBolt)
+        
+        // Add appropriate icon to the path based on state
+        val iconMatrix = Matrix()
+        
+        if (charging) {
+            // Calculate animation for bolt icon
+            val startX = -bounds.width() * 0.5f // Start position off-screen to the left
+            iconXOffset = startX - (startX - baseIconOffsetX) * slideProgress
+            
+            iconMatrix.setTranslate(iconXOffset, 0f)
+            val animatedBolt = Path()
+            scaledBolt.transform(iconMatrix, animatedBolt)
+            mergedPath.addPath(animatedBolt)
+            
+        } else if (powerSaveEnabled) {
+            // Calculate animation for battery saver icon
+            val startX = -bounds.width() * 0.5f // Start position off-screen to the left
+            iconXOffset = startX - (startX - baseIconOffsetX) * slideProgress
+            
+            iconMatrix.setTranslate(iconXOffset, 0f)
+            val animatedBatt = Path()
+            scaledBatt.transform(iconMatrix, animatedBatt)
+            mergedPath.addPath(animatedBatt)
+        }
 
         val xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
         textPaint.xfermode = xfermode
 
         // Deal with unifiedPath clipping before it draws
-        if (charging && batteryLevel < 100) {
-            // Clip out the bolt shape
+        if ((charging || powerSaveEnabled) && batteryLevel < 100) {
+            // Clip out the bolt shape and text
             unifiedPath.op(mergedPath, Path.Op.DIFFERENCE)
 
             if (!invertFillIcon) {
                 c.drawPath(mergedPath, textPaint)
             }
         } else {
-            // Clip out the text path
+            // Clip out the text path only
             unifiedPath.op(textPath, Path.Op.DIFFERENCE)
-
             c.drawPath(textPath, textPaint)
+        }
+
+        // Handle the glow animation for charging
+        if (charging && animationActive) {
+            val currentTime = android.os.SystemClock.uptimeMillis()
+            val elapsedTime = currentTime - animationStartTime
+            
+            if (elapsedTime < ANIMATION_DURATION_MS) {
+                // Calculate animation progress (0.0 to 1.0)
+                val animationProgress = (elapsedTime % 1000) / 1000f
+                
+                // Update animation time for the next frame
+                animationTime = animationProgress * 2f * Math.PI.toFloat()
+                
+                // Calculate glow alpha based on sine wave for pulsing effect (100-255)
+                val glowAlpha = ((Math.sin(animationTime.toDouble()) + 1) / 2 * 155 + 100).toInt()
+                animationPaint.alpha = glowAlpha
+                
+                // Draw the battery shape with the animated glow
+                c.drawPath(unifiedPath, animationPaint)
+                
+                // Schedule next frame
+                invalidateSelf()
+            } else {
+                // Animation complete after 10 seconds
+                animationActive = false
+            }
         }
 
         // Dual tone means we draw the shape again, clipped to the charge level
@@ -265,10 +408,13 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
         c.restore()
     }
 
+    // Constants for animation
+    private val FRAME_RATE_MS: Long = 16 // Animation frame rate in milliseconds (60fps)
+    
     private fun batteryColorForLevel(level: Int): Int {
         return when {
-            charging -> 0xFF34C759.toInt()
-            powerSaveEnabled -> 0xFFFFCC0A.toInt()
+            charging -> 0xFF34C759.toInt() // Keep the green color for charging state
+            powerSaveEnabled -> 0xFFFFCC0A.toInt() // Yellow color for power save mode
             level > Companion.CRITICAL_LEVEL -> fillColor
             level >= 0 -> 0xFFFF0000.toInt()
             else -> getColorForLevel(level)
@@ -371,7 +517,14 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
 
     private fun postInvalidate() {
         unscheduleSelf(invalidateRunnable)
-        scheduleSelf(invalidateRunnable, 0)
+        
+        if ((charging && animationActive) || slideAnimationActive) {
+            // When charging and animation is active, schedule the next frame
+            scheduleSelf(invalidateRunnable, android.os.SystemClock.uptimeMillis() + FRAME_RATE_MS)
+        } else {
+            // Otherwise, invalidate immediately
+            scheduleSelf(invalidateRunnable, 0)
+        }
     }
 
     private fun updateSize() {
@@ -388,6 +541,7 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
         scaledFill.computeBounds(fillRect, true)
         boltPath.transform(scaleMatrix, scaledBolt)
         plusPath.transform(scaleMatrix, scaledPlus)
+        battPath.transform(scaleMatrix, scaledBatt)
 
         // It is expected that this view only ever scale by the same factor in each dimension, so
         // just pick one to scale the strokeWidths
@@ -423,6 +577,11 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
         val plusPathString = context.resources.getString(
                 com.android.internal.R.string.config_batterymeterLandPowersavePathiOS16)
         plusPath.set(PathParser.createPathFromPathData(plusPathString))
+        
+        // Load the new battery saver icon path
+        val battPathString = context.resources.getString(
+                com.android.internal.R.string.config_batterymeterLandBattPathiOS16)
+        battPath.set(PathParser.createPathFromPathData(battPathString))
 
         dualTone = true
     }
@@ -439,5 +598,10 @@ open class LandscapeBatteryDrawableiOS16(private val context: Context, frameColo
 
         // Arbitrarily chosen for visibility at small sizes
         private const val PROTECTION_MIN_STROKE_WIDTH = 6f
+        
+        // State constants to track animation transitions
+        private const val STATE_NORMAL = 0
+        private const val STATE_CHARGING = 1
+        private const val STATE_POWER_SAVE = 2
     }
 }
