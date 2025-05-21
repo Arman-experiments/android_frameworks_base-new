@@ -54,6 +54,13 @@ abstract class KeyguardSectionsModule {
         fun keyguardClockStyleSection(impl: KeyguardClockStyleSection): KeyguardSection
     }
 
+    @Module
+    interface KeyguardPeekDisplaySectionModule {
+        @Binds
+        @IntoSet
+        fun keyguardPeekDisplaySection(impl: KeyguardPeekDisplaySection): KeyguardSection
+    }
+
     @BindsOptionalOf
     @Named(KEYGUARD_AMBIENT_INDICATION_AREA_SECTION)
     abstract fun defaultAmbientIndicationAreaSection(): KeyguardSection
