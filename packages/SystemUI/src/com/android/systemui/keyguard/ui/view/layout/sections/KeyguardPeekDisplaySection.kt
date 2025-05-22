@@ -37,7 +37,8 @@ class KeyguardPeekDisplaySection
 constructor(
     private val context: Context,
 ) : KeyguardSection() {
-    private var peekDisplayView: PeekDisplayView? = null
+    private var peekDisplayTopView: PeekDisplayView? = null
+    private var peekDisplayBottomView: PeekDisplayView? = null
     private var peekDisplayEnabled = false
     private var peekDisplayLocation = 1
     private var contentObserver: ContentObserver? = null
@@ -81,33 +82,26 @@ constructor(
             "peek_display_location", 1, UserHandle.USER_CURRENT
         )
         
-        // Create or update views based on latest settings
-        addOrUpdatePeekDisplayViews(constraintLayout)
+        // Update visibility based on settings
+        updatePeekDisplayVisibility()
     }
     
-    private fun addOrUpdatePeekDisplayViews(constraintLayout: ConstraintLayout) {
+    private fun updatePeekDisplayVisibility() {
         if (!peekDisplayEnabled) {
-            // Hide both peek displays if disabled
-            constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_top)?.visibility = View.GONE
-            constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_bottom)?.visibility = View.GONE
+            peekDisplayTopView?.visibility = View.GONE
+            peekDisplayBottomView?.visibility = View.GONE
             return
         }
         
         // Show the appropriate peek display based on location setting
-        constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_top)?.let { view ->
-            view.visibility = if (peekDisplayLocation == 0) View.VISIBLE else View.GONE
-            if (peekDisplayLocation == 0) {
-                peekDisplayView = view
-                view.updatePeekDisplayState()
-            }
-        }
+        peekDisplayTopView?.visibility = if (peekDisplayLocation == 0) View.VISIBLE else View.GONE
+        peekDisplayBottomView?.visibility = if (peekDisplayLocation == 1) View.VISIBLE else View.GONE
         
-        constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_bottom)?.let { view ->
-            view.visibility = if (peekDisplayLocation == 1) View.VISIBLE else View.GONE
-            if (peekDisplayLocation == 1) {
-                peekDisplayView = view
-                view.updatePeekDisplayState()
-            }
+        // Update the active view state
+        if (peekDisplayLocation == 0) {
+            peekDisplayTopView?.updatePeekDisplayState()
+        } else {
+            peekDisplayBottomView?.updatePeekDisplayState()
         }
     }
 
@@ -125,25 +119,32 @@ constructor(
             "peek_display_location", 1, UserHandle.USER_CURRENT
         )
 
-        // Top peek display view
-        constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_top)?.let { existingView ->
-            (existingView.parent as? ViewGroup)?.removeView(existingView)
-            constraintLayout.addView(existingView)
-            existingView.visibility = if (peekDisplayEnabled && peekDisplayLocation == 0) View.VISIBLE else View.GONE
-            if (peekDisplayEnabled && peekDisplayLocation == 0) {
-                peekDisplayView = existingView
+        // Create top peek display view
+        if (peekDisplayTopView == null) {
+            peekDisplayTopView = PeekDisplayView(context).apply {
+                id = R.id.peek_display_top
+                layoutParams = ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_CONSTRAINT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+                )
             }
+            constraintLayout.addView(peekDisplayTopView)
         }
 
-        // Bottom peek display view
-        constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_bottom)?.let { existingView ->
-            (existingView.parent as? ViewGroup)?.removeView(existingView)
-            constraintLayout.addView(existingView)
-            existingView.visibility = if (peekDisplayEnabled && peekDisplayLocation == 1) View.VISIBLE else View.GONE
-            if (peekDisplayEnabled && peekDisplayLocation == 1) {
-                peekDisplayView = existingView
+        // Create bottom peek display view
+        if (peekDisplayBottomView == null) {
+            peekDisplayBottomView = PeekDisplayView(context).apply {
+                id = R.id.peek_display_bottom
+                layoutParams = ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_CONSTRAINT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+                )
             }
+            constraintLayout.addView(peekDisplayBottomView)
         }
+        
+        // Set initial visibility
+        updatePeekDisplayVisibility()
         
         // Register content observer to handle settings changes
         registerContentObserver(constraintLayout)
@@ -151,15 +152,18 @@ constructor(
 
     override fun bindData(constraintLayout: ConstraintLayout) {
         // Update the peek display state to ensure it's correctly initialized
-        peekDisplayView?.updatePeekDisplayState()
+        if (peekDisplayLocation == 0) {
+            peekDisplayTopView?.updatePeekDisplayState()
+        } else {
+            peekDisplayBottomView?.updatePeekDisplayState()
+        }
     }
 
     override fun applyConstraints(constraintSet: ConstraintSet) {
         if (!MigrateClocksToBlueprint.isEnabled) return
 
-        // Apply constraints for peek_display_top and peek_display_bottom
+        // Apply constraints for peek_display_top
         constraintSet.apply {
-            // For top peek display
             connect(
                 R.id.peek_display_top,
                 ConstraintSet.TOP,
@@ -181,7 +185,7 @@ constructor(
             constrainHeight(R.id.peek_display_top, ConstraintSet.WRAP_CONTENT)
             constrainWidth(R.id.peek_display_top, ConstraintSet.MATCH_CONSTRAINT)
 
-            // For bottom peek display
+            // Apply constraints for peek_display_bottom
             connect(
                 R.id.peek_display_bottom,
                 ConstraintSet.BOTTOM,
@@ -209,13 +213,16 @@ constructor(
         // Unregister content observer
         unregisterContentObserver()
         
-        // Clean up the PeekDisplayView if needed
-        constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_top)?.let { view ->
-            (view.parent as? ViewGroup)?.removeView(view)
+        // Remove the views from the layout
+        peekDisplayTopView?.let { view ->
+            constraintLayout.removeView(view)
         }
-        constraintLayout.findViewById<PeekDisplayView?>(R.id.peek_display_bottom)?.let { view ->
-            (view.parent as? ViewGroup)?.removeView(view)
+        peekDisplayBottomView?.let { view ->
+            constraintLayout.removeView(view)
         }
-        peekDisplayView = null
+        
+        // Clear references
+        peekDisplayTopView = null
+        peekDisplayBottomView = null
     }
 }
