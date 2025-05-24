@@ -147,14 +147,8 @@ constructor(
                 (existingView.parent as? ViewGroup)?.removeView(existingView)
             }
             
-            // Inflate the peek display layout
-            peekDisplayHolderTop = LayoutInflater.from(context).inflate(
-                R.layout.keyguard_peek_display,
-                constraintLayout,
-                false
-            ) as PeekDisplayHolderLinearLayout
-            
-            peekDisplayHolderTop?.apply {
+            // Create the PeekDisplayHolderLinearLayout programmatically
+            peekDisplayHolderTop = PeekDisplayHolderLinearLayout(context).apply {
                 id = R.id.peek_display_area_top
                 layoutParams = ConstraintLayout.LayoutParams(
                     ConstraintLayout.LayoutParams.MATCH_PARENT,
@@ -162,8 +156,18 @@ constructor(
                 )
             }
             
-            // Get the PeekDisplayView from the inflated layout
-            peekDisplayTopView = peekDisplayHolderTop?.findViewById<PeekDisplayView>(R.id.peek_display_top)
+            // Inflate the peek display view and add it to the holder
+            val peekDisplayView = LayoutInflater.from(context).inflate(
+                R.layout.peek_display_top,
+                peekDisplayHolderTop,
+                false
+            ) as PeekDisplayView
+            
+            peekDisplayView.id = R.id.peek_display_top
+            peekDisplayHolderTop?.addView(peekDisplayView)
+            
+            // Store reference to the PeekDisplayView
+            peekDisplayTopView = peekDisplayView
             
             if (peekDisplayHolderTop == null || peekDisplayTopView == null) {
                 Log.w(TAG, "Could not create peek display views")
