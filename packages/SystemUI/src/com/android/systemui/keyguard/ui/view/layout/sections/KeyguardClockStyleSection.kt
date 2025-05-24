@@ -98,14 +98,15 @@ constructor(
                 ConstraintSet.END
             )
             
-            // Position custom clock at the very top of status area, replacing default clock position
-            // Custom clock should be the first element, with other elements positioned below it
+            // Position custom clock at the top of status area with minimal margin
+            // Use a small margin to avoid status bar overlap but keep it close to top
+            val topMargin = (context.resources.getDimensionPixelSize(R.dimen.status_bar_height) * 1.75f).toInt()
             connect(
                 R.id.clock_ls,
                 ConstraintSet.TOP,
                 ConstraintSet.PARENT_ID,
                 ConstraintSet.TOP,
-                0 // Position directly at parent top like default clock
+                topMargin
             )
             
             // Ensure other elements are positioned below the custom clock
@@ -144,11 +145,9 @@ constructor(
             constrainHeight(R.id.clock_ls, ConstraintSet.WRAP_CONTENT)
             constrainWidth(R.id.clock_ls, ConstraintSet.MATCH_CONSTRAINT)
             
-            // Set margins to 0 to match default clock positioning
+            // Set side margins to 0 to match default clock positioning
             setMargin(R.id.clock_ls, ConstraintSet.START, 0)
             setMargin(R.id.clock_ls, ConstraintSet.END, 0)
-            setMargin(R.id.clock_ls, ConstraintSet.TOP, 0)
-            setMargin(R.id.clock_ls, ConstraintSet.BOTTOM, 0)
             
             // Update the barrier to include custom clock for proper notification positioning
             createBarrier(
