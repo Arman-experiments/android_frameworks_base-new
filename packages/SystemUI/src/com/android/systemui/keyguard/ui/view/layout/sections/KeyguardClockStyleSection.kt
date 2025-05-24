@@ -98,32 +98,46 @@ constructor(
                 ConstraintSet.END
             )
             
-            // Position at the top of status area like default clock - no extra margins
-            if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
+            // Position custom clock at the very top of status area, replacing default clock position
+            // Custom clock should be the first element, with other elements positioned below it
+            connect(
+                R.id.clock_ls,
+                ConstraintSet.TOP,
+                ConstraintSet.PARENT_ID,
+                ConstraintSet.TOP,
+                0 // Position directly at parent top like default clock
+            )
+            
+            // Ensure other elements are positioned below the custom clock
+            if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
                 connect(
-                    R.id.clock_ls,
-                    ConstraintSet.TOP,
-                    R.id.keyguard_weather,
-                    ConstraintSet.BOTTOM,
-                    0 // No extra margin to prevent spacing issues
-                )
-            } else if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
-                connect(
-                    R.id.clock_ls,
-                    ConstraintSet.TOP,
                     R.id.keyguard_slice_view,
-                    ConstraintSet.BOTTOM,
-                    0 // No extra margin
-                )
-            } else {
-                // Position directly at parent top like default clock
-                connect(
+                    ConstraintSet.TOP,
                     R.id.clock_ls,
-                    ConstraintSet.TOP,
-                    ConstraintSet.PARENT_ID,
-                    ConstraintSet.TOP,
-                    0 // No extra margin - let the clock handle its own internal padding
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start)
                 )
+            }
+            
+            if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
+                // Position weather below slice view if it exists, otherwise below clock
+                if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
+                    connect(
+                        R.id.keyguard_weather,
+                        ConstraintSet.TOP,
+                        R.id.keyguard_slice_view,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                } else {
+                    connect(
+                        R.id.keyguard_weather,
+                        ConstraintSet.TOP,
+                        R.id.clock_ls,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                }
             }
             
             // Set dimensions
