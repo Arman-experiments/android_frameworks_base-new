@@ -23,13 +23,16 @@ import android.os.Handler
 import android.os.UserHandle
 import android.provider.Settings
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.notifications.ui.PeekDisplayView
+import com.android.systemui.notifications.ui.PeekDisplayHolderLinearLayout
 import com.android.systemui.res.R
 import javax.inject.Inject
 
@@ -43,8 +46,8 @@ constructor(
         private const val TAG = "KeyguardPeekDisplaySection"
     }
     
+    private var peekDisplayHolderTop: PeekDisplayHolderLinearLayout? = null
     private var peekDisplayTopView: PeekDisplayView? = null
-    private var peekDisplayBottomView: PeekDisplayView? = null
     private var peekDisplayEnabled = false
     private var peekDisplayLocation = 1
     private var contentObserver: ContentObserver? = null
@@ -102,35 +105,28 @@ constructor(
         
         if (!peekDisplayEnabled) {
             Log.d(TAG, "Peek display disabled, hiding all views")
-            peekDisplayTopView?.visibility = View.GONE
-            peekDisplayBottomView?.visibility = View.GONE
+            peekDisplayHolderTop?.visibility = View.GONE
             return
         }
         
-        // Show the appropriate peek display based on location setting
+        // Show the peek display only at the top for location setting 0
         val topVisible = peekDisplayLocation == 0
-        val bottomVisible = peekDisplayLocation == 1
         
-        Log.d(TAG, "Setting visibility - top: $topVisible, bottom: $bottomVisible")
+        Log.d(TAG, "Setting visibility - top: $topVisible")
         
-        peekDisplayTopView?.visibility = if (topVisible) View.VISIBLE else View.GONE
-        peekDisplayBottomView?.visibility = if (bottomVisible) View.VISIBLE else View.GONE
+        peekDisplayHolderTop?.visibility = if (topVisible) View.VISIBLE else View.GONE
         
         // Update the active view state
         if (topVisible) {
             Log.d(TAG, "Updating top view state")
             peekDisplayTopView?.updatePeekDisplayState()
-        } else if (bottomVisible) {
-            Log.d(TAG, "Updating bottom view state")
-            peekDisplayBottomView?.updatePeekDisplayState()
         }
     }
 
     override fun addViews(constraintLayout: ConstraintLayout) {
         Log.d(TAG, "addViews called - MigrateClocksToBlueprint.isEnabled: ${MigrateClocksToBlueprint.isEnabled}")
         
-        // Remove the blueprint check temporarily for debugging
-        // if (!MigrateClocksToBlueprint.isEnabled) return
+        if (!MigrateClocksToBlueprint.isEnabled) return
 
         // Get current settings
         peekDisplayEnabled = Settings.Secure.getIntForUser(
@@ -146,44 +142,39 @@ constructor(
         Log.d(TAG, "Initial settings - enabled: $peekDisplayEnabled, location: $peekDisplayLocation")
 
         try {
-            // Create top peek display view
-            if (peekDisplayTopView == null) {
-                Log.d(TAG, "Creating top peek display view")
-                peekDisplayTopView = PeekDisplayView(context).apply {
-                    id = R.id.peek_display_top
-                    layoutParams = ConstraintLayout.LayoutParams(
-                        ConstraintLayout.LayoutParams.MATCH_CONSTRAINT,
-                        ConstraintLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    // Force visibility for debugging
-                    visibility = View.VISIBLE
-                    setBackgroundColor(0x44FF0000) // Semi-transparent red for debugging
-                }
-                constraintLayout.addView(peekDisplayTopView)
-                Log.d(TAG, "Top peek display view added to constraint layout")
-            }
-
-            // Create bottom peek display view
-            if (peekDisplayBottomView == null) {
-                Log.d(TAG, "Creating bottom peek display view")
-                peekDisplayBottomView = PeekDisplayView(context).apply {
-                    id = R.id.peek_display_bottom
-                    layoutParams = ConstraintLayout.LayoutParams(
-                        ConstraintLayout.LayoutParams.MATCH_CONSTRAINT,
-                        ConstraintLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    // Force visibility for debugging
-                    visibility = View.VISIBLE
-                    setBackgroundColor(0x4400FF00) // Semi-transparent green for debugging
-                }
-                constraintLayout.addView(peekDisplayBottomView)
-                Log.d(TAG, "Bottom peek display view added to constraint layout")
+            // Remove existing view with the same ID if it exists
+            constraintLayout.findViewById<View?>(R.id.peek_display_area_top)?.let { existingView ->
+                (existingView.parent as? ViewGroup)?.removeView(existingView)
             }
             
-            Log.d(TAG, "ConstraintLayout child count: ${constraintLayout.childCount}")
+            // Inflate the peek display layout
+            peekDisplayHolderTop = LayoutInflater.from(context).inflate(
+                R.layout.keyguard_peek_display,
+                constraintLayout,
+                false
+            ) as PeekDisplayHolderLinearLayout
             
-            // Set initial visibility (comment out for debugging)
-            // updatePeekDisplayVisibility()
+            peekDisplayHolderTop?.apply {
+                id = R.id.peek_display_area_top
+                layoutParams = ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_PARENT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+            
+            // Get the PeekDisplayView from the inflated layout
+            peekDisplayTopView = peekDisplayHolderTop?.findViewById<PeekDisplayView>(R.id.peek_display_top)
+            
+            if (peekDisplayHolderTop == null || peekDisplayTopView == null) {
+                Log.w(TAG, "Could not create peek display views")
+                return
+            }
+            
+            constraintLayout.addView(peekDisplayHolderTop)
+            Log.d(TAG, "Added peek display views to constraint layout")
+            
+            // Set initial visibility
+            updatePeekDisplayVisibility()
             
             // Register content observer to handle settings changes
             registerContentObserver(constraintLayout)
@@ -197,10 +188,8 @@ constructor(
         Log.d(TAG, "bindData called")
         try {
             // Update the peek display state to ensure it's correctly initialized
-            if (peekDisplayLocation == 0) {
+            if (peekDisplayLocation == 0 && peekDisplayEnabled) {
                 peekDisplayTopView?.updatePeekDisplayState()
-            } else {
-                peekDisplayBottomView?.updatePeekDisplayState()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in bindData", e)
@@ -210,61 +199,115 @@ constructor(
     override fun applyConstraints(constraintSet: ConstraintSet) {
         Log.d(TAG, "applyConstraints called")
         
-        // Remove the blueprint check temporarily for debugging
-        // if (!MigrateClocksToBlueprint.isEnabled) return
+        if (!MigrateClocksToBlueprint.isEnabled) return
 
         try {
-            // Apply constraints for peek_display_top
             constraintSet.apply {
+                // Position peek display within the keyguard_status_area
                 connect(
-                    R.id.peek_display_top,
-                    ConstraintSet.TOP,
-                    ConstraintSet.PARENT_ID,
-                    ConstraintSet.TOP,
-                    16 // Add some margin for debugging
-                )
-                connect(
-                    R.id.peek_display_top,
+                    R.id.peek_display_area_top,
                     ConstraintSet.START,
                     ConstraintSet.PARENT_ID,
-                    ConstraintSet.START,
-                    16 // Add some margin for debugging
+                    ConstraintSet.START
                 )
                 connect(
-                    R.id.peek_display_top,
+                    R.id.peek_display_area_top,
                     ConstraintSet.END,
                     ConstraintSet.PARENT_ID,
-                    ConstraintSet.END,
-                    16 // Add some margin for debugging
+                    ConstraintSet.END
                 )
-                constrainHeight(R.id.peek_display_top, 100) // Fixed height for debugging
-                constrainWidth(R.id.peek_display_top, ConstraintSet.MATCH_CONSTRAINT)
-
-                // Apply constraints for peek_display_bottom
-                connect(
-                    R.id.peek_display_bottom,
-                    ConstraintSet.BOTTOM,
-                    ConstraintSet.PARENT_ID,
-                    ConstraintSet.BOTTOM,
-                    16 // Add some margin for debugging
+                
+                // Position below widgets if available, otherwise below other status content
+                if (constraintSet.getConstraint(R.id.keyguard_widgets) != null) {
+                    connect(
+                        R.id.peek_display_area_top,
+                        ConstraintSet.TOP,
+                        R.id.keyguard_widgets,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                } else if (constraintSet.getConstraint(R.id.keyguard_info_widgets) != null) {
+                    connect(
+                        R.id.peek_display_area_top,
+                        ConstraintSet.TOP,
+                        R.id.keyguard_info_widgets,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                } else if (constraintSet.getConstraint(R.id.clock_ls) != null) {
+                    connect(
+                        R.id.peek_display_area_top,
+                        ConstraintSet.TOP,
+                        R.id.clock_ls,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                } else if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
+                    connect(
+                        R.id.peek_display_area_top,
+                        ConstraintSet.TOP,
+                        R.id.keyguard_weather,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                } else if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
+                    connect(
+                        R.id.peek_display_area_top,
+                        ConstraintSet.TOP,
+                        R.id.keyguard_slice_view,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                } else {
+                    // Last resort: position below the small clock
+                    connect(
+                        R.id.peek_display_area_top,
+                        ConstraintSet.TOP,
+                        R.id.lockscreen_clock_view,
+                        ConstraintSet.BOTTOM,
+                        8
+                    )
+                }
+                
+                // Set dimensions
+                constrainHeight(R.id.peek_display_area_top, ConstraintSet.WRAP_CONTENT)
+                constrainWidth(R.id.peek_display_area_top, ConstraintSet.MATCH_CONSTRAINT)
+                
+                // Set appropriate margins matching the XML structure
+                setMargin(R.id.peek_display_area_top, ConstraintSet.START, 0)
+                setMargin(R.id.peek_display_area_top, ConstraintSet.END, 0)
+                
+                // Ensure proper layering within the status area
+                setElevation(R.id.peek_display_area_top, 3f)
+                
+                // Update the barrier to include peek display for proper notification positioning
+                // This ensures notifications appear below all status area content
+                createBarrier(
+                    R.id.smart_space_barrier_bottom,
+                    Barrier.BOTTOM,
+                    0,
+                    *intArrayOf(
+                        R.id.keyguard_slice_view,
+                        R.id.keyguard_weather,
+                        R.id.clock_ls,
+                        R.id.keyguard_info_widgets,
+                        R.id.keyguard_widgets,
+                        R.id.peek_display_area_top
+                    )
                 )
-                connect(
-                    R.id.peek_display_bottom,
-                    ConstraintSet.START,
-                    ConstraintSet.PARENT_ID,
-                    ConstraintSet.START,
-                    16 // Add some margin for debugging
-                )
-                connect(
-                    R.id.peek_display_bottom,
-                    ConstraintSet.END,
-                    ConstraintSet.PARENT_ID,
-                    ConstraintSet.END,
-                    16 // Add some margin for debugging
-                )
-                constrainHeight(R.id.peek_display_bottom, 100) // Fixed height for debugging
-                constrainWidth(R.id.peek_display_bottom, ConstraintSet.MATCH_CONSTRAINT)
+                
+                // Ensure notification icons are positioned below the barrier
+                if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
+                    connect(
+                        R.id.left_aligned_notification_icon_container,
+                        ConstraintSet.TOP,
+                        R.id.smart_space_barrier_bottom,
+                        ConstraintSet.BOTTOM,
+                        context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                    )
+                }
             }
+            
             Log.d(TAG, "Constraints applied successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error in applyConstraints", e)
@@ -278,19 +321,15 @@ constructor(
         unregisterContentObserver()
         
         try {
-            // Remove the views from the layout
-            peekDisplayTopView?.let { view ->
-                constraintLayout.removeView(view)
-                Log.d(TAG, "Removed top peek display view")
-            }
-            peekDisplayBottomView?.let { view ->
-                constraintLayout.removeView(view)
-                Log.d(TAG, "Removed bottom peek display view")
+            // Remove the holder view from the layout
+            peekDisplayHolderTop?.let { view ->
+                (view.parent as? ViewGroup)?.removeView(view)
+                Log.d(TAG, "Removed peek display holder view")
             }
             
             // Clear references
+            peekDisplayHolderTop = null
             peekDisplayTopView = null
-            peekDisplayBottomView = null
         } catch (e: Exception) {
             Log.e(TAG, "Error in removeViews", e)
         }

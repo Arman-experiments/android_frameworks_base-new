@@ -17,7 +17,6 @@ package com.android.systemui.keyguard.ui.view.layout.sections
 
 import android.content.Context
 import android.os.UserHandle
-import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.Barrier
@@ -85,41 +84,45 @@ constructor(
         if (!MigrateClocksToBlueprint.isEnabled || !isCustomClockEnabled) return
         
         constraintSet.apply {
-            // Position the custom clock in the status area - same position as default clock
+            // Position the custom clock within the keyguard_status_area
             connect(
                 R.id.clock_ls,
                 ConstraintSet.START,
                 ConstraintSet.PARENT_ID,
-                ConstraintSet.START,
-                context.resources.getDimensionPixelSize(custR.dimen.clock_padding_start)
+                ConstraintSet.START
             )
             connect(
                 R.id.clock_ls,
                 ConstraintSet.END,
                 ConstraintSet.PARENT_ID,
-                ConstraintSet.END,
-                context.resources.getDimensionPixelSize(custR.dimen.clock_padding_start)
+                ConstraintSet.END
             )
             
-            // Position relative to status area or existing clock elements
-            // This ensures we don't interfere with the default clock positioning
-            if (constraintSet.getConstraint(R.id.keyguard_status_area) != null) {
-                // If default clock exists, position below it
+            // Position below the slice view or weather view if available
+            if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
                 connect(
                     R.id.clock_ls,
                     ConstraintSet.TOP,
-                    R.id.keyguard_status_area,
-                    ConstraintSet.BOTTOM
+                    R.id.keyguard_weather,
+                    ConstraintSet.BOTTOM,
+                    8 // Consistent spacing
+                )
+            } else if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
+                connect(
+                    R.id.clock_ls,
+                    ConstraintSet.TOP,
+                    R.id.keyguard_slice_view,
+                    ConstraintSet.BOTTOM,
+                    8
                 )
             } else {
-                // Otherwise position at the normal clock location
-                val marginTop = context.resources.getDimensionPixelSize(R.dimen.custom_clock_frame_margin_top)
+                // Position relative to the keyguard status area's top margin
                 connect(
                     R.id.clock_ls,
                     ConstraintSet.TOP,
                     ConstraintSet.PARENT_ID,
                     ConstraintSet.TOP,
-                    marginTop
+                    context.resources.getDimensionPixelSize(R.dimen.keyguard_status_area_margin_top)
                 )
             }
             
@@ -127,48 +130,35 @@ constructor(
             constrainHeight(R.id.clock_ls, ConstraintSet.WRAP_CONTENT)
             constrainWidth(R.id.clock_ls, ConstraintSet.MATCH_CONSTRAINT)
             
-            // Adjust notification positioning by updating the status area margin
-            // This pushes notifications down to account for custom clock space
-            if (constraintSet.getConstraint(R.id.keyguard_status_area) != null) {
-                val statusAreaMarginTop = context.resources.getDimensionPixelSize(R.dimen.keyguard_status_area_margin_top)
-                connect(
-                    R.id.keyguard_status_area,
-                    ConstraintSet.TOP,
-                    R.id.clock_ls,
-                    ConstraintSet.BOTTOM,
-                    statusAreaMarginTop
-                )
-            }
+            // Set appropriate margins to match the status area layout
+            setMargin(R.id.clock_ls, ConstraintSet.START, 0)
+            setMargin(R.id.clock_ls, ConstraintSet.END, 0)
             
-            // Update smart space and slice positioning to be relative to custom clock
-            if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
-                connect(
-                    R.id.keyguard_slice_view,
-                    ConstraintSet.TOP,
-                    R.id.clock_ls,
-                    ConstraintSet.BOTTOM
-                )
-            }
-            
-            // Create a barrier that includes the custom clock for proper notification positioning
+            // Update the barrier to include custom clock for proper notification positioning
             createBarrier(
                 R.id.smart_space_barrier_bottom,
                 Barrier.BOTTOM,
                 0,
-                *intArrayOf(R.id.clock_ls, R.id.keyguard_slice_view)
+                *intArrayOf(
+                    R.id.keyguard_slice_view,
+                    R.id.keyguard_weather,
+                    R.id.clock_ls,
+                    R.id.keyguard_info_widgets
+                )
             )
             
-            // Ensure custom clock doesn't interfere with notification icons
+            // Ensure notification icons are positioned below all status area content
             if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
                 connect(
                     R.id.left_aligned_notification_icon_container,
                     ConstraintSet.TOP,
                     R.id.smart_space_barrier_bottom,
-                    ConstraintSet.BOTTOM
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
                 )
             }
             
-            // Ensure proper layer ordering
+            // Set proper elevation within the status area
             setElevation(R.id.clock_ls, 1f)
         }
     }
@@ -178,19 +168,5 @@ constructor(
             (clockView.parent as? ViewGroup)?.removeView(clockView)
         }
         clockStyleView = null
-        
-        // Reset notification positioning when custom clock is removed
-        // This ensures notifications return to their normal position
-        if (!isCustomClockEnabled) {
-            resetNotificationPositioning(constraintLayout)
-        }
-    }
-    
-    private fun resetNotificationPositioning(constraintLayout: ConstraintLayout) {
-        // Reset status area positioning to default when custom clock is disabled
-        constraintLayout.findViewById<View?>(R.id.keyguard_status_area)?.let { statusArea ->
-            val layoutParams = statusArea.layoutParams as? ConstraintLayout.LayoutParams
-            layoutParams?.topMargin = 0
-        }
     }
 }

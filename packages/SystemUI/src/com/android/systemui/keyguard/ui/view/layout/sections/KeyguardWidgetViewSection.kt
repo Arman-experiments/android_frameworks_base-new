@@ -19,6 +19,7 @@ package com.android.systemui.keyguard.ui.view.layout.sections
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
+import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
@@ -34,15 +35,11 @@ constructor(
 ) : KeyguardSection() {
 
     private var widgetView: LockScreenWidgets? = null
-    
-    // Use the widget ID that is actually in your R.id resources
-    // For now, we'll use the same ID as in your original implementation
-    private val KEYGUARD_WIDGETS_ID = R.id.keyguard_widgets
 
     override fun addViews(constraintLayout: ConstraintLayout) {
         if (!MigrateClocksToBlueprint.isEnabled) return
         
-        constraintLayout.findViewById<View?>(KEYGUARD_WIDGETS_ID)?.let { existingView ->
+        constraintLayout.findViewById<View?>(R.id.keyguard_widgets)?.let { existingView ->
             // Remove from current parent if it exists
             (existingView.parent as? ViewGroup)?.removeView(existingView)
             
@@ -52,78 +49,122 @@ constructor(
             // Cast to LockScreenWidgets and store reference
             widgetView = existingView as? LockScreenWidgets
             
-            // The view will handle initialization through its lifecycle methods
-            // (onAttachedToWindow, onFinishInflate) since your implementation
-            // uses the controller pattern with automatic callback registration
+            // Ensure proper layout parameters
+            existingView.layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
         }
     }
 
     override fun bindData(constraintLayout: ConstraintLayout) {
-        // Data binding can be handled here if needed
-        // Your current implementation handles this through the controller
+        // Data binding is handled through the controller pattern
+        // The view handles initialization through its lifecycle methods
     }
 
     override fun applyConstraints(constraintSet: ConstraintSet) {
         if (!MigrateClocksToBlueprint.isEnabled) return
         
         constraintSet.apply {
-            // Position widgets area to span full width
+            // Position widgets within the keyguard_status_area, below other status area content
             connect(
-                KEYGUARD_WIDGETS_ID,
+                R.id.keyguard_widgets,
                 ConstraintSet.START,
                 ConstraintSet.PARENT_ID,
-                ConstraintSet.START,
-                0,
+                ConstraintSet.START
             )
             connect(
-                KEYGUARD_WIDGETS_ID,
+                R.id.keyguard_widgets,
                 ConstraintSet.END,
                 ConstraintSet.PARENT_ID,
-                ConstraintSet.END,
-                0
+                ConstraintSet.END
             )
             
-            // Set height to wrap content
-            constrainHeight(KEYGUARD_WIDGETS_ID, ConstraintSet.WRAP_CONTENT)
-            
-            // Try to position below the info widgets if the resource ID exists
-            if (R.id.keyguard_info_widgets != 0) {
+            // Position below the info widgets if available, otherwise below other status content
+            if (constraintSet.getConstraint(R.id.keyguard_info_widgets) != null) {
                 connect(
-                    KEYGUARD_WIDGETS_ID,
+                    R.id.keyguard_widgets,
                     ConstraintSet.TOP,
                     R.id.keyguard_info_widgets,
                     ConstraintSet.BOTTOM,
-                    16 // Add some margin
+                    8 // Small margin
                 )
-            } else if (R.id.keyguard_slice_view != 0) {
-                // Fall back to the slice view
+            } else if (constraintSet.getConstraint(R.id.clock_ls) != null) {
                 connect(
-                    KEYGUARD_WIDGETS_ID,
+                    R.id.keyguard_widgets,
+                    ConstraintSet.TOP,
+                    R.id.clock_ls,
+                    ConstraintSet.BOTTOM,
+                    8
+                )
+            } else if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
+                connect(
+                    R.id.keyguard_widgets,
+                    ConstraintSet.TOP,
+                    R.id.keyguard_weather,
+                    ConstraintSet.BOTTOM,
+                    8
+                )
+            } else if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
+                connect(
+                    R.id.keyguard_widgets,
                     ConstraintSet.TOP,
                     R.id.keyguard_slice_view,
                     ConstraintSet.BOTTOM,
-                    16
+                    8
                 )
             } else {
-                // Last resort: position below the status view
+                // Last resort: position below the small clock
                 connect(
-                    KEYGUARD_WIDGETS_ID,
+                    R.id.keyguard_widgets,
                     ConstraintSet.TOP,
-                    R.id.keyguard_status_view,
+                    R.id.lockscreen_clock_view,
                     ConstraintSet.BOTTOM,
-                    16
+                    8
                 )
             }
             
-            // Set elevation to ensure proper z-order
-            setElevation(KEYGUARD_WIDGETS_ID, 2f)
+            // Set dimensions
+            constrainHeight(R.id.keyguard_widgets, ConstraintSet.WRAP_CONTENT)
+            constrainWidth(R.id.keyguard_widgets, ConstraintSet.MATCH_CONSTRAINT)
+            
+            // Set margins matching the status area structure
+            setMargin(R.id.keyguard_widgets, ConstraintSet.START, 0)
+            setMargin(R.id.keyguard_widgets, ConstraintSet.END, 0)
+            
+            // Set elevation to ensure proper layering within status area
+            setElevation(R.id.keyguard_widgets, 2f)
+            
+            // Update the barrier to include widgets for proper notification positioning
+            createBarrier(
+                R.id.smart_space_barrier_bottom,
+                Barrier.BOTTOM,
+                0,
+                *intArrayOf(
+                    R.id.keyguard_slice_view,
+                    R.id.keyguard_weather,
+                    R.id.clock_ls,
+                    R.id.keyguard_info_widgets,
+                    R.id.keyguard_widgets
+                )
+            )
+            
+            // Ensure notification icons are positioned below all status area content
+            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
+                connect(
+                    R.id.left_aligned_notification_icon_container,
+                    ConstraintSet.TOP,
+                    R.id.smart_space_barrier_bottom,
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                )
+            }
         }
     }
 
     override fun removeViews(constraintLayout: ConstraintLayout) {
         widgetView?.let { view ->
-            // Your LockScreenWidgets will handle cleanup through onDetachedFromWindow
-            // which calls mViewController?.unregisterCallbacks()
+            // The LockScreenWidgets will handle cleanup through onDetachedFromWindow
             constraintLayout.removeView(view)
         }
         widgetView = null

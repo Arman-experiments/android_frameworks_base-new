@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Top Peek Display Area -->
+    <com.android.systemui.notifications.ui.PeekDisplayHolderLinearLayout
+        android:id="@+id/peek_display_area_top"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.android.systemui.notifications.ui.PeekDisplayView
+            android:id="@+id/peek_display_top"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </com.android.systemui.notifications.ui.PeekDisplayHolderLinearLayout>
+
+    <!-- Bottom Peek Display Area -->
+    <com.android.systemui.notifications.ui.PeekDisplayHolderLinearLayout
+        android:id="@+id/peek_display_area_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical">
+
+        <com.android.systemui.notifications.ui.PeekDisplayView
+            android:id="@+id/peek_display_bottom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </com.android.systemui.notifications.ui.PeekDisplayHolderLinearLayout>
+</LinearLayout>

@@ -67,7 +67,7 @@ constructor(
         if (!MigrateClocksToBlueprint.isEnabled) return
         
         constraintSet.apply {
-            // Position the info widgets below the smart space barrier (which is either the clock or other elements)
+            // Position info widgets within the keyguard_status_area
             connect(
                 R.id.keyguard_info_widgets,
                 ConstraintSet.START,
@@ -81,43 +81,77 @@ constructor(
                 ConstraintSet.END
             )
             
-            // Connect to a suitable top anchor
-            // Using ID directly since constraintLayout isn't available here
-            val hasCustomClock = R.id.clock_ls != 0 // Check if the resource ID exists
-            
-            if (hasCustomClock) {
+            // Position below the weather view or clock_ls if available
+            if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
+                connect(
+                    R.id.keyguard_info_widgets,
+                    ConstraintSet.TOP,
+                    R.id.keyguard_weather,
+                    ConstraintSet.BOTTOM,
+                    8 // Small margin
+                )
+            } else if (constraintSet.getConstraint(R.id.clock_ls) != null) {
                 connect(
                     R.id.keyguard_info_widgets,
                     ConstraintSet.TOP,
                     R.id.clock_ls,
                     ConstraintSet.BOTTOM,
-                    24 // Extra margin below the clock
+                    8
                 )
-            } else {
-                // Fall back to the status view
+            } else if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
                 connect(
                     R.id.keyguard_info_widgets,
                     ConstraintSet.TOP,
-                    R.id.keyguard_status_view,
+                    R.id.keyguard_slice_view,
                     ConstraintSet.BOTTOM,
-                    24
+                    8
+                )
+            } else {
+                // Last resort: position below the small clock
+                connect(
+                    R.id.keyguard_info_widgets,
+                    ConstraintSet.TOP,
+                    R.id.lockscreen_clock_view,
+                    ConstraintSet.BOTTOM,
+                    8
                 )
             }
             
-            // Set appropriate margins
-            setMargin(R.id.keyguard_info_widgets, ConstraintSet.TOP, 24)
-            setMargin(R.id.keyguard_info_widgets, ConstraintSet.START, 16)
-            setMargin(R.id.keyguard_info_widgets, ConstraintSet.END, 16)
-            
-            // Set height to wrap content
+            // Set dimensions
             constrainHeight(R.id.keyguard_info_widgets, ConstraintSet.WRAP_CONTENT)
             constrainWidth(R.id.keyguard_info_widgets, ConstraintSet.MATCH_CONSTRAINT)
             
-            // Set the elevation to ensure proper layering
+            // Set appropriate margins matching the XML structure
+            setMargin(R.id.keyguard_info_widgets, ConstraintSet.START, 0)
+            setMargin(R.id.keyguard_info_widgets, ConstraintSet.END, 0)
+            
+            // Ensure proper layering within the status area
             setElevation(R.id.keyguard_info_widgets, 1f)
             
-            // If you need to create a barrier, use a defined barrier ID from your resources
-            // For now, we'll skip this since the barrier ID isn't defined in your resources
+            // Update the barrier to include info widgets for proper notification positioning
+            // This ensures notifications appear below all status area content
+            createBarrier(
+                R.id.smart_space_barrier_bottom,
+                Barrier.BOTTOM,
+                0,
+                *intArrayOf(
+                    R.id.keyguard_slice_view,
+                    R.id.keyguard_weather,
+                    R.id.clock_ls,
+                    R.id.keyguard_info_widgets
+                )
+            )
+            
+            // Ensure notification icons are positioned below the barrier
+            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
+                connect(
+                    R.id.left_aligned_notification_icon_container,
+                    ConstraintSet.TOP,
+                    R.id.smart_space_barrier_bottom,
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                )
+            }
         }
     }
     
