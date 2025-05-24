@@ -98,14 +98,14 @@ constructor(
                 ConstraintSet.END
             )
             
-            // Position below the slice view or weather view if available
+            // Position at the top of status area like default clock - no extra margins
             if (constraintSet.getConstraint(R.id.keyguard_weather) != null) {
                 connect(
                     R.id.clock_ls,
                     ConstraintSet.TOP,
                     R.id.keyguard_weather,
                     ConstraintSet.BOTTOM,
-                    8 // Consistent spacing
+                    0 // No extra margin to prevent spacing issues
                 )
             } else if (constraintSet.getConstraint(R.id.keyguard_slice_view) != null) {
                 connect(
@@ -113,16 +113,16 @@ constructor(
                     ConstraintSet.TOP,
                     R.id.keyguard_slice_view,
                     ConstraintSet.BOTTOM,
-                    8
+                    0 // No extra margin
                 )
             } else {
-                // Position relative to the keyguard status area's top margin
+                // Position directly at parent top like default clock
                 connect(
                     R.id.clock_ls,
                     ConstraintSet.TOP,
                     ConstraintSet.PARENT_ID,
                     ConstraintSet.TOP,
-                    context.resources.getDimensionPixelSize(R.dimen.keyguard_status_area_margin_top)
+                    0 // No extra margin - let the clock handle its own internal padding
                 )
             }
             
@@ -130,9 +130,11 @@ constructor(
             constrainHeight(R.id.clock_ls, ConstraintSet.WRAP_CONTENT)
             constrainWidth(R.id.clock_ls, ConstraintSet.MATCH_CONSTRAINT)
             
-            // Set appropriate margins to match the status area layout
+            // Set margins to 0 to match default clock positioning
             setMargin(R.id.clock_ls, ConstraintSet.START, 0)
             setMargin(R.id.clock_ls, ConstraintSet.END, 0)
+            setMargin(R.id.clock_ls, ConstraintSet.TOP, 0)
+            setMargin(R.id.clock_ls, ConstraintSet.BOTTOM, 0)
             
             // Update the barrier to include custom clock for proper notification positioning
             createBarrier(
