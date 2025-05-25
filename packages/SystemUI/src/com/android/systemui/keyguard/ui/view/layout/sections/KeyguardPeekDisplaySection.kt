@@ -49,8 +49,8 @@ constructor(
     private var peekDisplayHolderTop: PeekDisplayHolderLinearLayout? = null
     private var peekDisplayTopView: PeekDisplayView? = null
     private var peekDisplayEnabled = false
-    private var peekDisplayLocation = 1
     private var contentObserver: ContentObserver? = null
+    private var isViewInitialized = false
 
     private fun registerContentObserver(constraintLayout: ConstraintLayout) {
         Log.d(TAG, "registerContentObserver called")
@@ -65,11 +65,6 @@ constructor(
         val contentResolver: ContentResolver = context.contentResolver
         contentResolver.registerContentObserver(
             Settings.Secure.getUriFor("peek_display_notifications"),
-            false,
-            contentObserver!!
-        )
-        contentResolver.registerContentObserver(
-            Settings.Secure.getUriFor("peek_display_location"),
             false,
             contentObserver!!
         )
@@ -89,37 +84,43 @@ constructor(
             "peek_display_notifications", 0, UserHandle.USER_CURRENT
         ) == 1
         
-        peekDisplayLocation = Settings.Secure.getIntForUser(
-            context.contentResolver,
-            "peek_display_location", 1, UserHandle.USER_CURRENT
-        )
-        
-        Log.d(TAG, "updatePeekDisplayState - enabled: $peekDisplayEnabled, location: $peekDisplayLocation")
+        Log.d(TAG, "updatePeekDisplayState - enabled: $peekDisplayEnabled")
         
         // Update visibility based on settings
         updatePeekDisplayVisibility()
     }
     
     private fun updatePeekDisplayVisibility() {
-        Log.d(TAG, "updatePeekDisplayVisibility - enabled: $peekDisplayEnabled, location: $peekDisplayLocation")
+        Log.d(TAG, "updatePeekDisplayVisibility - enabled: $peekDisplayEnabled")
         
         if (!peekDisplayEnabled) {
-            Log.d(TAG, "Peek display disabled, hiding all views")
+            Log.d(TAG, "Peek display disabled, hiding view")
             peekDisplayHolderTop?.visibility = View.GONE
             return
         }
         
-        // Show the peek display only at the top for location setting 0
-        val topVisible = peekDisplayLocation == 0
+        // Always show at the top when enabled
+        Log.d(TAG, "Setting visibility - top: true")
+        peekDisplayHolderTop?.visibility = View.VISIBLE
         
-        Log.d(TAG, "Setting visibility - top: $topVisible")
-        
-        peekDisplayHolderTop?.visibility = if (topVisible) View.VISIBLE else View.GONE
-        
-        // Update the active view state
-        if (topVisible) {
-            Log.d(TAG, "Updating top view state")
-            peekDisplayTopView?.updatePeekDisplayState()
+        // Update the active view state and force refresh of current notifications
+        Log.d(TAG, "Updating top view state and refreshing notifications")
+        peekDisplayTopView?.let { view ->
+            view.updatePeekDisplayState()
+            // Force refresh to show existing notifications
+            view.refreshNotifications()
+        }
+    }
+    
+    private fun initializePeekDisplayWithCurrentNotifications() {
+        Log.d(TAG, "initializePeekDisplayWithCurrentNotifications called")
+        if (peekDisplayEnabled && peekDisplayTopView != null) {
+            // Post to ensure view is fully initialized
+            peekDisplayTopView?.post {
+                Log.d(TAG, "Initializing peek display with current notifications")
+                peekDisplayTopView?.updatePeekDisplayState()
+                peekDisplayTopView?.refreshNotifications()
+            }
         }
     }
 
@@ -133,13 +134,8 @@ constructor(
             context.contentResolver,
             "peek_display_notifications", 0, UserHandle.USER_CURRENT
         ) == 1
-        
-        peekDisplayLocation = Settings.Secure.getIntForUser(
-            context.contentResolver,
-            "peek_display_location", 1, UserHandle.USER_CURRENT
-        )
 
-        Log.d(TAG, "Initial settings - enabled: $peekDisplayEnabled, location: $peekDisplayLocation")
+        Log.d(TAG, "Initial settings - enabled: $peekDisplayEnabled")
 
         try {
             // Remove existing view with the same ID if it exists
@@ -180,6 +176,10 @@ constructor(
             // Register content observer to handle settings changes
             registerContentObserver(constraintLayout)
             
+            // Mark as initialized and initialize with current notifications
+            isViewInitialized = true
+            initializePeekDisplayWithCurrentNotifications()
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error in addViews", e)
         }
@@ -189,8 +189,12 @@ constructor(
         Log.d(TAG, "bindData called")
         try {
             // Update the peek display state to ensure it's correctly initialized
-            if (peekDisplayLocation == 0 && peekDisplayEnabled) {
-                peekDisplayTopView?.updatePeekDisplayState()
+            if (peekDisplayEnabled && isViewInitialized) {
+                peekDisplayTopView?.let { view ->
+                    view.updatePeekDisplayState()
+                    // Ensure we refresh with current notifications on bind
+                    view.refreshNotifications()
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in bindData", e)
@@ -331,6 +335,7 @@ constructor(
             // Clear references
             peekDisplayHolderTop = null
             peekDisplayTopView = null
+            isViewInitialized = false
         } catch (e: Exception) {
             Log.e(TAG, "Error in removeViews", e)
         }
