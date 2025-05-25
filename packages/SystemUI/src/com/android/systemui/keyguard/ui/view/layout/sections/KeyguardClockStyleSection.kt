@@ -100,7 +100,7 @@ constructor(
             
             // Position custom clock at the top of status area with minimal margin
             // Use a small margin to avoid status bar overlap but keep it close to top
-            val topMargin = (context.resources.getDimensionPixelSize(R.dimen.status_bar_height) * 1.75f).toInt()
+            val topMargin = (context.resources.getDimensionPixelSize(R.dimen.status_bar_height) * 1.25f).toInt()
             connect(
                 R.id.clock_ls,
                 ConstraintSet.TOP,
