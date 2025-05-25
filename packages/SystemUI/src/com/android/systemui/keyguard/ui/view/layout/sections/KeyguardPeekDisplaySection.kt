@@ -50,7 +50,6 @@ constructor(
     private var peekDisplayTopView: PeekDisplayView? = null
     private var peekDisplayEnabled = false
     private var contentObserver: ContentObserver? = null
-    private var isViewInitialized = false
 
     private fun registerContentObserver(constraintLayout: ConstraintLayout) {
         Log.d(TAG, "registerContentObserver called")
@@ -103,25 +102,9 @@ constructor(
         Log.d(TAG, "Setting visibility - top: true")
         peekDisplayHolderTop?.visibility = View.VISIBLE
         
-        // Update the active view state and force refresh of current notifications
-        Log.d(TAG, "Updating top view state and refreshing notifications")
-        peekDisplayTopView?.let { view ->
-            view.updatePeekDisplayState()
-            // Force refresh to show existing notifications
-            view.refreshNotifications()
-        }
-    }
-    
-    private fun initializePeekDisplayWithCurrentNotifications() {
-        Log.d(TAG, "initializePeekDisplayWithCurrentNotifications called")
-        if (peekDisplayEnabled && peekDisplayTopView != null) {
-            // Post to ensure view is fully initialized
-            peekDisplayTopView?.post {
-                Log.d(TAG, "Initializing peek display with current notifications")
-                peekDisplayTopView?.updatePeekDisplayState()
-                peekDisplayTopView?.refreshNotifications()
-            }
-        }
+        // Update the active view state
+        Log.d(TAG, "Updating top view state")
+        peekDisplayTopView?.updatePeekDisplayState()
     }
 
     override fun addViews(constraintLayout: ConstraintLayout) {
@@ -176,10 +159,6 @@ constructor(
             // Register content observer to handle settings changes
             registerContentObserver(constraintLayout)
             
-            // Mark as initialized and initialize with current notifications
-            isViewInitialized = true
-            initializePeekDisplayWithCurrentNotifications()
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error in addViews", e)
         }
@@ -189,12 +168,8 @@ constructor(
         Log.d(TAG, "bindData called")
         try {
             // Update the peek display state to ensure it's correctly initialized
-            if (peekDisplayEnabled && isViewInitialized) {
-                peekDisplayTopView?.let { view ->
-                    view.updatePeekDisplayState()
-                    // Ensure we refresh with current notifications on bind
-                    view.refreshNotifications()
-                }
+            if (peekDisplayEnabled) {
+                peekDisplayTopView?.updatePeekDisplayState()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in bindData", e)
@@ -335,7 +310,6 @@ constructor(
             // Clear references
             peekDisplayHolderTop = null
             peekDisplayTopView = null
-            isViewInitialized = false
         } catch (e: Exception) {
             Log.e(TAG, "Error in removeViews", e)
         }
