@@ -156,14 +156,11 @@ constructor(
                 )
             }
             
-            // Inflate the peek display view and add it to the holder
-            val peekDisplayView = LayoutInflater.from(context).inflate(
-                R.layout.peek_display_top,
-                peekDisplayHolderTop,
-                false
-            ) as PeekDisplayView
+            // Create PeekDisplayView directly instead of inflating layout
+            val peekDisplayView = PeekDisplayView(context).apply {
+                id = R.id.peek_display_top
+            }
             
-            peekDisplayView.id = R.id.peek_display_top
             peekDisplayHolderTop?.addView(peekDisplayView)
             
             // Store reference to the PeekDisplayView
