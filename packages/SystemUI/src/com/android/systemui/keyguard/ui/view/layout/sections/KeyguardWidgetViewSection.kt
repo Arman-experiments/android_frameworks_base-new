@@ -62,14 +62,6 @@ constructor(
         // The view handles initialization through its lifecycle methods
     }
 
-    private fun applyLocationConstraints(constraintLayout: ConstraintLayout) {
-        // Re-apply constraints when needed to fix notification overlaying
-        val constraintSet = ConstraintSet()
-        constraintSet.clone(constraintLayout)
-        applyConstraints(constraintSet)
-        constraintSet.applyTo(constraintLayout)
-    }
-
     override fun applyConstraints(constraintSet: ConstraintSet) {
         if (!MigrateClocksToBlueprint.isEnabled) return
         
@@ -142,6 +134,31 @@ constructor(
             
             // Set elevation to ensure proper layering within status area
             setElevation(R.id.keyguard_widgets, 2f)
+            
+            // Update the barrier to include widgets for proper notification positioning
+            createBarrier(
+                R.id.smart_space_barrier_bottom,
+                Barrier.BOTTOM,
+                0,
+                *intArrayOf(
+                    R.id.keyguard_slice_view,
+                    R.id.keyguard_weather,
+                    R.id.clock_ls,
+                    R.id.keyguard_info_widgets,
+                    R.id.keyguard_widgets
+                )
+            )
+            
+            // Ensure notification icons are positioned below all status area content
+            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
+                connect(
+                    R.id.left_aligned_notification_icon_container,
+                    ConstraintSet.TOP,
+                    R.id.smart_space_barrier_bottom,
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                )
+            }
         }
     }
 
