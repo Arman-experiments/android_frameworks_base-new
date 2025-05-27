@@ -124,44 +124,84 @@ constructor(
             return
         }
         
-        Log.d(TAG, "Peek display is disabled, triggering toggle to fix alignment issues")
+        Log.d(TAG, "Peek display is disabled, triggering full lifecycle toggle to fix alignment issues")
         
         constraintLayoutRef?.let { layout ->
             try {
-                // Temporarily enable peek display to fix alignment
                 val originalEnabled = peekDisplayEnabled
+                val originalLocation = peekDisplayLocation
                 
-                // Temporarily set enabled state
+                // Step 1: Temporarily enable peek display
                 peekDisplayEnabled = true
+                Log.d(TAG, "Toggle Step 1: Temporarily enabled peek display")
                 
-                // Update visibility to show the peek display
-                updatePeekDisplayVisibility()
+                // Step 2: Go through updatePeekDisplayState (full state update)
+                updatePeekDisplayState(layout)
+                Log.d(TAG, "Toggle Step 2: Updated peek display state")
                 
-                // Force a layout pass
+                // Step 3: Go through bindData (data binding)
+                bindData(layout)
+                Log.d(TAG, "Toggle Step 3: Bound data to views")
+                
+                // Step 4: Go through applyConstraints (constraint application)
+                val constraintSet = ConstraintSet()
+                constraintSet.clone(layout)
+                applyConstraints(constraintSet)
+                constraintSet.applyTo(layout)
+                Log.d(TAG, "Toggle Step 4: Applied constraints")
+                
+                // Step 5: Force layout pass to ensure everything is calculated
                 layout.requestLayout()
+                layout.invalidate()
+                Log.d(TAG, "Toggle Step 5: Forced layout refresh")
                 
-                // After a brief moment, restore the disabled state
+                // Step 6: After brief moment, restore disabled state and go through disable cycle
                 handler.postDelayed({
-                    // Restore original disabled state
-                    peekDisplayEnabled = originalEnabled
-                    
-                    // Hide the peek display again
-                    peekDisplayHolderTop?.visibility = View.GONE
-                    peekDisplayHolderBottom?.visibility = View.GONE
-                    
-                    // Force another layout pass
-                    layout.requestLayout()
-                    
-                    Log.d(TAG, "Peek display toggle completed - alignment fixed, peek display hidden again")
-                }, 50L) // Brief delay for the toggle effect
+                    try {
+                        // Restore original states
+                        peekDisplayEnabled = originalEnabled
+                        peekDisplayLocation = originalLocation
+                        
+                        Log.d(TAG, "Toggle Step 6: Restored original disabled state")
+                        
+                        // Go through state update again with disabled state
+                        updatePeekDisplayState(layout)
+                        Log.d(TAG, "Toggle Step 7: Updated state to disabled")
+                        
+                        // Apply constraints for disabled state
+                        val disabledConstraintSet = ConstraintSet()
+                        disabledConstraintSet.clone(layout)
+                        applyConstraints(disabledConstraintSet)
+                        disabledConstraintSet.applyTo(layout)
+                        Log.d(TAG, "Toggle Step 8: Applied disabled constraints")
+                        
+                        // Final layout pass
+                        layout.requestLayout()
+                        layout.invalidate()
+                        
+                        Log.d(TAG, "Peek display full lifecycle toggle completed - alignment fixed, peek display properly disabled")
+                        
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error during disable phase of toggle", e)
+                        // Restore original state on error
+                        peekDisplayEnabled = originalEnabled
+                        peekDisplayLocation = originalLocation
+                        updatePeekDisplayVisibility()
+                    }
+                }, 100L) // Slightly longer delay to ensure full lifecycle completion
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error during peek display toggle", e)
+                Log.e(TAG, "Error during peek display full lifecycle toggle", e)
                 // Restore original state on error
                 peekDisplayEnabled = Settings.Secure.getIntForUser(
                     context.contentResolver,
                     "peek_display_notifications", 0, UserHandle.USER_CURRENT
                 ) == 1
+                peekDisplayLocation = Settings.Secure.getIntForUser(
+                    context.contentResolver,
+                    "peek_display_location", PEEK_DISPLAY_LOCATION_BOTTOM, UserHandle.USER_CURRENT
+                )
+                updatePeekDisplayVisibility()
             }
         } ?: Log.w(TAG, "ConstraintLayout reference is null, cannot trigger toggle")
     }
