@@ -16,8 +16,11 @@
  */
 package com.android.systemui.keyguard.ui.view.layout.sections
 
+import android.content.BroadcastReceiver
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.UserHandle
@@ -46,6 +49,7 @@ constructor(
         private const val TAG = "KeyguardPeekDisplaySection"
         private const val PEEK_DISPLAY_LOCATION_TOP = 0
         private const val PEEK_DISPLAY_LOCATION_BOTTOM = 1
+        private const val TOGGLE_DELAY_MS = 100L // Small delay for the toggle
     }
     
     // Top peek display components
@@ -60,6 +64,107 @@ constructor(
     private var peekDisplayEnabled = false
     private var peekDisplayLocation = PEEK_DISPLAY_LOCATION_BOTTOM
     private var contentObserver: ContentObserver? = null
+    private var constraintLayoutRef: ConstraintLayout? = null
+    private val handler = Handler(context.mainLooper)
+    
+    // Screen state receiver
+    private var screenStateReceiver: BroadcastReceiver? = null
+
+    private fun registerScreenStateReceiver() {
+        Log.d(TAG, "registerScreenStateReceiver called")
+        
+        screenStateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_ON -> {
+                        Log.d(TAG, "Screen turned ON - triggering peek display alignment fix")
+                        // Delay the toggle slightly to ensure the UI is ready
+                        handler.postDelayed({
+                            triggerPeekDisplayToggle()
+                        }, TOGGLE_DELAY_MS)
+                    }
+                    Intent.ACTION_USER_PRESENT -> {
+                        Log.d(TAG, "User unlocked device - triggering peek display alignment fix")
+                        // Also trigger on unlock for additional safety
+                        handler.postDelayed({
+                            triggerPeekDisplayToggle()
+                        }, TOGGLE_DELAY_MS)
+                    }
+                }
+            }
+        }
+        
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        
+        context.registerReceiver(screenStateReceiver, filter)
+        Log.d(TAG, "Screen state receiver registered")
+    }
+    
+    private fun unregisterScreenStateReceiver() {
+        Log.d(TAG, "unregisterScreenStateReceiver called")
+        screenStateReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+                screenStateReceiver = null
+                Log.d(TAG, "Screen state receiver unregistered")
+            } catch (e: Exception) {
+                Log.w(TAG, "Error unregistering screen state receiver", e)
+            }
+        }
+    }
+    
+    private fun triggerPeekDisplayToggle() {
+        Log.d(TAG, "triggerPeekDisplayToggle called - enabled: $peekDisplayEnabled")
+        
+        if (peekDisplayEnabled) {
+            Log.d(TAG, "Peek display is enabled, no toggle needed - alignment is fine")
+            return
+        }
+        
+        Log.d(TAG, "Peek display is disabled, triggering toggle to fix alignment issues")
+        
+        constraintLayoutRef?.let { layout ->
+            try {
+                // Temporarily enable peek display to fix alignment
+                val originalEnabled = peekDisplayEnabled
+                
+                // Temporarily set enabled state
+                peekDisplayEnabled = true
+                
+                // Update visibility to show the peek display
+                updatePeekDisplayVisibility()
+                
+                // Force a layout pass
+                layout.requestLayout()
+                
+                // After a brief moment, restore the disabled state
+                handler.postDelayed({
+                    // Restore original disabled state
+                    peekDisplayEnabled = originalEnabled
+                    
+                    // Hide the peek display again
+                    peekDisplayHolderTop?.visibility = View.GONE
+                    peekDisplayHolderBottom?.visibility = View.GONE
+                    
+                    // Force another layout pass
+                    layout.requestLayout()
+                    
+                    Log.d(TAG, "Peek display toggle completed - alignment fixed, peek display hidden again")
+                }, 50L) // Brief delay for the toggle effect
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during peek display toggle", e)
+                // Restore original state on error
+                peekDisplayEnabled = Settings.Secure.getIntForUser(
+                    context.contentResolver,
+                    "peek_display_notifications", 0, UserHandle.USER_CURRENT
+                ) == 1
+            }
+        } ?: Log.w(TAG, "ConstraintLayout reference is null, cannot trigger toggle")
+    }
 
     private fun registerContentObserver(constraintLayout: ConstraintLayout) {
         Log.d(TAG, "registerContentObserver called")
@@ -152,6 +257,9 @@ constructor(
         
         if (!MigrateClocksToBlueprint.isEnabled) return
 
+        // Store reference to constraint layout for toggle functionality
+        constraintLayoutRef = constraintLayout
+
         // Get current settings
         peekDisplayEnabled = Settings.Secure.getIntForUser(
             context.contentResolver,
@@ -175,6 +283,9 @@ constructor(
             
             // Register content observer to handle settings changes
             registerContentObserver(constraintLayout)
+            
+            // Register screen state receiver for wake-up detection
+            registerScreenStateReceiver()
             
         } catch (e: Exception) {
             Log.e(TAG, "Error in addViews", e)
@@ -450,6 +561,15 @@ constructor(
         
         // Unregister content observer
         unregisterContentObserver()
+        
+        // Unregister screen state receiver
+        unregisterScreenStateReceiver()
+        
+        // Clear constraint layout reference
+        constraintLayoutRef = null
+        
+        // Remove pending callbacks
+        handler.removeCallbacksAndMessages(null)
         
         try {
             // Remove both holder views from the layout
