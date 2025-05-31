@@ -129,30 +129,71 @@ constructor(
             // Ensure proper layering within the status area
             setElevation(R.id.keyguard_info_widgets, 1f)
             
-            // Update the barrier to include info widgets for proper notification positioning
-            // This ensures notifications appear below all status area content
-            createBarrier(
-                R.id.smart_space_barrier_bottom,
-                Barrier.BOTTOM,
-                0,
-                *intArrayOf(
-                    R.id.keyguard_slice_view,
-                    R.id.keyguard_weather,
-                    R.id.clock_ls,
-                    R.id.keyguard_info_widgets
-                )
-            )
+            // Remove existing barrier first to avoid conflicts
+            removeFromBarrier(R.id.smart_space_barrier_bottom)
             
-            // Ensure notification icons are positioned below the barrier
-            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
-                connect(
-                    R.id.left_aligned_notification_icon_container,
-                    ConstraintSet.TOP,
+            // Create a comprehensive list of views that should be above notifications
+            val barrierViews = mutableListOf<Int>()
+            
+            // Add views that exist in the constraint set
+            listOf(
+                R.id.keyguard_slice_view,
+                R.id.keyguard_weather, 
+                R.id.clock_ls,
+                R.id.lockscreen_clock_view,
+                R.id.keyguard_info_widgets
+            ).forEach { viewId ->
+                if (constraintSet.getConstraint(viewId) != null) {
+                    barrierViews.add(viewId)
+                }
+            }
+            
+            // Only create barrier if we have views to reference
+            if (barrierViews.isNotEmpty()) {
+                createBarrier(
                     R.id.smart_space_barrier_bottom,
-                    ConstraintSet.BOTTOM,
-                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                    Barrier.BOTTOM,
+                    0,
+                    *barrierViews.toIntArray()
                 )
             }
+            
+            // Position notifications below the barrier with proper spacing
+            listOf(
+                R.id.left_aligned_notification_icon_container,
+                R.id.right_aligned_notification_icon_container,
+                R.id.notification_stack_scroller
+            ).forEach { notificationId ->
+                if (constraintSet.getConstraint(notificationId) != null) {
+                    // Clear any existing top constraints first
+                    clear(notificationId, ConstraintSet.TOP)
+                    
+                    if (barrierViews.isNotEmpty()) {
+                        // Connect to barrier if it exists
+                        connect(
+                            notificationId,
+                            ConstraintSet.TOP,
+                            R.id.smart_space_barrier_bottom,
+                            ConstraintSet.BOTTOM,
+                            context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                        )
+                    } else {
+                        // Fallback: connect directly to info widgets
+                        connect(
+                            notificationId,
+                            ConstraintSet.TOP,
+                            R.id.keyguard_info_widgets,
+                            ConstraintSet.BOTTOM,
+                            context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                        )
+                    }
+                }
+            }
+            
+            // Additional safety: ensure info widgets don't overlap with notification area
+            // by setting a maximum height constraint if needed
+            val maxHeight = context.resources.displayMetrics.heightPixels / 3
+            constrainMaxHeight(R.id.keyguard_info_widgets, maxHeight)
         }
     }
     

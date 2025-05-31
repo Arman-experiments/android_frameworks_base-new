@@ -158,7 +158,19 @@ public final class KeyEntryHooks {
             if (keyStr != null && !keyStr.isEmpty()) {
                 try {
                     Log.d(TAG, "Decoding Base64 key for algorithm: " + algo);
-                    byte[] bytes = Base64.getDecoder().decode(keyStr);
+
+                    // Clean up the key string - remove whitespace and fix padding if needed
+                    String cleanKey = keyStr.replaceAll("\\s+", "");
+                    
+                    // Fix Base64 padding if necessary
+                    int padding = cleanKey.length() % 4;
+                    if (padding != 0) {
+                        int paddingNeeded = 4 - padding;
+                        cleanKey = cleanKey + "=".repeat(paddingNeeded);
+                        Log.d(TAG, "Added " + paddingNeeded + " padding characters to Base64 key");
+                    }
+                    
+                    byte[] bytes = Base64.getDecoder().decode(cleanKey);
                     Log.d(TAG, "Key decoded, length: " + bytes.length + " bytes");
                     
                     // First try PKCS#8 format
@@ -190,6 +202,16 @@ public final class KeyEntryHooks {
                             }
                         }
                         
+                        // For RSA keys, try alternative Base64 decoding approaches
+                        if (KeyProperties.KEY_ALGORITHM_RSA.equals(algo)) {
+                            try {
+                                PrivateKey key = parseRSAPrivateKeyAlternative(cleanKey);
+                                Log.i(TAG, "Successfully parsed RSA private key with alternative method for algorithm: " + algo);
+                                return key;
+                            } catch (Exception e3) {
+                                Log.w(TAG, "Alternative RSA key parsing also failed for key entry " + i, e3);
+                            }
+                        }
                         // If all parsing methods fail, throw the original exception
                         throw e1;
                     }
@@ -206,6 +228,33 @@ public final class KeyEntryHooks {
         
         Log.e(TAG, "No valid private keys found for algorithm: " + algo);
         throw new IllegalArgumentException("No valid private keys found");
+    }
+
+    private static PrivateKey parseRSAPrivateKeyAlternative(String keyStr) throws Exception {
+        Log.d(TAG, "Attempting alternative RSA private key parsing");
+        
+        // Try URL-safe Base64 decoder
+        try {
+            byte[] bytes = Base64.getUrlDecoder().decode(keyStr);
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(bytes);
+            PrivateKey key = KeyFactory.getInstance(KeyProperties.KEY_ALGORITHM_RSA).generatePrivate(spec);
+            Log.i(TAG, "Successfully parsed RSA private key with URL-safe Base64 decoder");
+            return key;
+        } catch (Exception e) {
+            Log.d(TAG, "URL-safe Base64 decoding failed, trying MIME decoder", e);
+        }
+        
+        // Try MIME Base64 decoder (handles line breaks and other whitespace)
+        try {
+            byte[] bytes = Base64.getMimeDecoder().decode(keyStr);
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(bytes);
+            PrivateKey key = KeyFactory.getInstance(KeyProperties.KEY_ALGORITHM_RSA).generatePrivate(spec);
+            Log.i(TAG, "Successfully parsed RSA private key with MIME Base64 decoder");
+            return key;
+        } catch (Exception e) {
+            Log.d(TAG, "MIME Base64 decoding also failed", e);
+            throw new Exception("All RSA private key parsing methods failed", e);
+        }
     }
 
     private static PrivateKey parseECPrivateKeySEC1(byte[] keyBytes) throws Exception {
