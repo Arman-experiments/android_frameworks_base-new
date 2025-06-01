@@ -91,8 +91,17 @@ constructor(
             constrainWidth(R.id.keyguard_info_widgets, ConstraintSet.MATCH_CONSTRAINT)
             setMargin(R.id.keyguard_info_widgets, ConstraintSet.START, 0)
             setMargin(R.id.keyguard_info_widgets, ConstraintSet.END, 0)
+            // Add small bottom margin for AOD to prevent notification overlap
+            setMargin(R.id.keyguard_info_widgets, ConstraintSet.BOTTOM, 6) // 6dp bottom margin for AOD
             setElevation(R.id.keyguard_info_widgets, 1f)
             
+            // UNIFIED BARRIER - Create barrier in every section that could be last
+            createUnifiedBarrierAndNotificationConstraints(constraintSet)
+        }
+    }
+    
+    private fun createUnifiedBarrierAndNotificationConstraints(constraintSet: ConstraintSet) {
+        constraintSet.apply {
             // UNIFIED BARRIER - Include ALL status area elements
             createBarrier(
                 R.id.smart_space_barrier_bottom,

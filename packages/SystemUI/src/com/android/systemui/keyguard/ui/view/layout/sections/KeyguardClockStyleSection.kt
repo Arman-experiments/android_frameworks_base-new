@@ -91,6 +91,13 @@ constructor(
             setMargin(R.id.clock_ls, ConstraintSet.END, 0)
             setElevation(R.id.clock_ls, 1f)
             
+            // UNIFIED BARRIER - Create barrier in every section that could be last
+            createUnifiedBarrierAndNotificationConstraints(constraintSet)
+        }
+    }
+    
+    private fun createUnifiedBarrierAndNotificationConstraints(constraintSet: ConstraintSet) {
+        constraintSet.apply {
             // UNIFIED BARRIER - Include ALL status area elements
             createBarrier(
                 R.id.smart_space_barrier_bottom,

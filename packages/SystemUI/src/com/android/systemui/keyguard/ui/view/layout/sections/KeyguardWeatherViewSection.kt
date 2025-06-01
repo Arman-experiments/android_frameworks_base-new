@@ -115,33 +115,8 @@ class KeyguardWeatherViewSection @Inject constructor(
                 applyWeatherTextConstraints(constraintSet)
             }
             
-            // UNIFIED BARRIER - Include ALL status area elements
-            createBarrier(
-                R.id.smart_space_barrier_bottom,
-                Barrier.BOTTOM,
-                0,
-                *intArrayOf(
-                    R.id.keyguard_slice_view,
-                    R.id.keyguard_weather,
-                    R.id.default_weather_image,
-                    R.id.default_weather_text,
-                    R.id.clock_ls,
-                    R.id.keyguard_info_widgets,
-                    R.id.keyguard_widgets,
-                    R.id.lockscreen_clock_view // Include fallback clock
-                )
-            )
-            
-            // Position notifications below ALL status area content
-            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
-                connect(
-                    R.id.left_aligned_notification_icon_container,
-                    ConstraintSet.TOP,
-                    R.id.smart_space_barrier_bottom,
-                    ConstraintSet.BOTTOM,
-                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
-                )
-            }
+            // UNIFIED BARRIER - Create barrier in every section that could be last
+            createUnifiedBarrierAndNotificationConstraints(constraintSet)
         }
     }
 
@@ -174,6 +149,38 @@ class KeyguardWeatherViewSection @Inject constructor(
                 connect(R.id.default_weather_text, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
                 constrainHeight(R.id.default_weather_text, ConstraintSet.WRAP_CONTENT)
                 constrainWidth(R.id.default_weather_text, ConstraintSet.WRAP_CONTENT)
+            }
+        }
+    }
+    
+    private fun createUnifiedBarrierAndNotificationConstraints(constraintSet: ConstraintSet) {
+        constraintSet.apply {
+            // UNIFIED BARRIER - Include ALL status area elements
+            createBarrier(
+                R.id.smart_space_barrier_bottom,
+                Barrier.BOTTOM,
+                0,
+                *intArrayOf(
+                    R.id.keyguard_slice_view,
+                    R.id.keyguard_weather,
+                    R.id.default_weather_image,
+                    R.id.default_weather_text,
+                    R.id.clock_ls,
+                    R.id.keyguard_info_widgets,
+                    R.id.keyguard_widgets,
+                    R.id.lockscreen_clock_view // Include fallback clock
+                )
+            )
+            
+            // Position notifications below ALL status area content
+            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
+                connect(
+                    R.id.left_aligned_notification_icon_container,
+                    ConstraintSet.TOP,
+                    R.id.smart_space_barrier_bottom,
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                )
             }
         }
     }

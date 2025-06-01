@@ -91,6 +91,13 @@ constructor(
             setMargin(R.id.keyguard_widgets, ConstraintSet.END, 0)
             setElevation(R.id.keyguard_widgets, 2f)
             
+            // UNIFIED BARRIER - Create barrier in every section that could be last
+            createUnifiedBarrierAndNotificationConstraints(constraintSet)
+        }
+    }
+    
+    private fun createUnifiedBarrierAndNotificationConstraints(constraintSet: ConstraintSet) {
+        constraintSet.apply {
             // UNIFIED BARRIER - All elements above notifications (FINAL barrier)
             createBarrier(
                 R.id.smart_space_barrier_bottom,
