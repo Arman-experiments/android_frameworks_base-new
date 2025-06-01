@@ -18,6 +18,7 @@ package com.android.systemui.keyguard.ui.view.layout.sections
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
+import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.android.systemui.customization.R as custR
@@ -112,6 +113,34 @@ class KeyguardWeatherViewSection @Inject constructor(
             } else {
                 applyWeatherImageConstraints(constraintSet, startMargin)
                 applyWeatherTextConstraints(constraintSet)
+            }
+            
+            // UNIFIED BARRIER - Include ALL status area elements
+            createBarrier(
+                R.id.smart_space_barrier_bottom,
+                Barrier.BOTTOM,
+                0,
+                *intArrayOf(
+                    R.id.keyguard_slice_view,
+                    R.id.keyguard_weather,
+                    R.id.default_weather_image,
+                    R.id.default_weather_text,
+                    R.id.clock_ls,
+                    R.id.keyguard_info_widgets,
+                    R.id.keyguard_widgets,
+                    R.id.lockscreen_clock_view // Include fallback clock
+                )
+            )
+            
+            // Position notifications below ALL status area content
+            if (constraintSet.getConstraint(R.id.left_aligned_notification_icon_container) != null) {
+                connect(
+                    R.id.left_aligned_notification_icon_container,
+                    ConstraintSet.TOP,
+                    R.id.smart_space_barrier_bottom,
+                    ConstraintSet.BOTTOM,
+                    context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start_icons)
+                )
             }
         }
     }

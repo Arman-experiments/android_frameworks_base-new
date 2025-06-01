@@ -91,7 +91,7 @@ constructor(
             setMargin(R.id.keyguard_widgets, ConstraintSet.END, 0)
             setElevation(R.id.keyguard_widgets, 2f)
             
-            // UNIFIED BARRIER - All elements above notifications (5th in hierarchy)
+            // UNIFIED BARRIER - All elements above notifications (FINAL barrier)
             createBarrier(
                 R.id.smart_space_barrier_bottom,
                 Barrier.BOTTOM,
@@ -103,7 +103,8 @@ constructor(
                     R.id.default_weather_text,
                     R.id.clock_ls,
                     R.id.keyguard_info_widgets,
-                    R.id.keyguard_widgets
+                    R.id.keyguard_widgets,
+                    R.id.lockscreen_clock_view // Include fallback clock
                 )
             )
             
